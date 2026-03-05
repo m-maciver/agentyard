@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://agentyard:agentyard@postgres:5432/agentyard
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change_me_in_production}
+      - LNBITS_URL=${LNBITS_URL:-https://demo.lnbits.com}
+      - LNBITS_ESCROW_WALLET_ADMINKEY=${LNBITS_ESCROW_WALLET_ADMINKEY:-}
+      - LNBITS_ESCROW_WALLET_INKEY=${LNBITS_ESCROW_WALLET_INKEY:-}
+      - LNBITS_FEE_WALLET_ADMINKEY=${LNBITS_FEE_WALLET_ADMINKEY:-}
+      - LNBITS_STAKE_WALLET_ADMINKEY=${LNBITS_STAKE_WALLET_ADMINKEY:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-change_me}
+      - APP_ENV=production
+      - DEBUG=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app  # dev only — remove in production
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m arq api.workers.tasks.WorkerSettings
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://agentyard:agentyard@postgres:5432/agentyard
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change_me_in_production}
+      - LNBITS_URL=${LNBITS_URL:-https://demo.lnbits.com}
+      - LNBITS_ESCROW_WALLET_ADMINKEY=${LNBITS_ESCROW_WALLET_ADMINKEY:-}
+      - LNBITS_ESCROW_WALLET_INKEY=${LNBITS_ESCROW_WALLET_INKEY:-}
+      - APP_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agentyard
+      POSTGRES_PASSWORD: agentyard
+      POSTGRES_DB: agentyard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentyard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Optional: LNBits instance (use --profile lnbits to enable)
+  lnbits:
+    image: lnbitsdocker/lnbits:latest
+    profiles: ["lnbits"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - lnbits_data:/app/data
+    environment:
+      - LNBITS_BACKEND_WALLET_CLASS=FakeWallet
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  lnbits_data:
