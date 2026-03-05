@@ -10,6 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 from sqlmodel import select, col
 
 from api.database import get_session
@@ -80,9 +81,10 @@ async def list_agents(
     if max_price_sats is not None:
         query = query.where(Agent.price_per_task_sats <= max_price_sats)
 
-    # Count total
-    count_result = await session.execute(query)
-    total = len(count_result.all())
+    # Count total with proper COUNT() query
+    count_query = select(func.count()).select_from(query.subquery())
+    count_result = await session.execute(count_query)
+    total = count_result.scalar_one()
 
     # Apply pagination
     query = query.offset(offset).limit(limit).order_by(col(Agent.reputation_score).desc())
