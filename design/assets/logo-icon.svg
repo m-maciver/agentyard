@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <!-- Hexagon (flat-top, radius 14, center 16,16) -->
+  <!-- Points: 0°(30,16) 60°(23,4) 120°(9,4) 180°(2,16) 240°(9,28) 300°(23,28) -->
+  <polygon
+    points="30,16 23,4 9,4 2,16 9,28 23,28"
+    fill="#F7931A"
+  />
+  <!-- Lightning bolt (white, centred in hex) -->
+  <!-- Top point slightly right → sweep left-down → notch right → sweep left-down to bottom → notch right → back up -->
+  <path
+    d="M 19 7 L 11 18 L 16.5 18 L 13 25 L 21 14 L 15.5 14 Z"
+    fill="#ffffff"
+  />
+</svg>
