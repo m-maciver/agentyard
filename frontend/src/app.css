@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-background: #0a0a0f;
+  --color-foreground: #f0f0f5;
+  --color-card: #111118;
+  --color-card-foreground: #f0f0f5;
+  --color-popover: #111118;
+  --color-popover-foreground: #f0f0f5;
+  --color-primary: #F7931A;
+  --color-primary-foreground: #0a0a0f;
+  --color-secondary: #1e1e2e;
+  --color-secondary-foreground: #a0a0b8;
+  --color-muted: #1a1a26;
+  --color-muted-foreground: #6b6b8a;
+  --color-accent: #F7931A;
+  --color-accent-foreground: #0a0a0f;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #22c55e;
+  --color-success-foreground: #0a2010;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #0a0a0f;
+  --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
+  --color-border: #252535;
+  --color-border-strong: #3a3a50;
+  --color-input: #1e1e2e;
+  --color-ring: #F7931A;
+  --color-surface-0: #0a0a0f;
+  --color-surface-1: #111118;
+  --color-surface-2: #1a1a26;
+  --color-surface-3: #252535;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+}
+
+:root {
+  --background: #0a0a0f;
+  --foreground: #f0f0f5;
+  --card: #111118;
+  --card-foreground: #f0f0f5;
+  --primary: #F7931A;
+  --primary-foreground: #0a0a0f;
+  --secondary: #1e1e2e;
+  --secondary-foreground: #a0a0b8;
+  --muted: #1a1a26;
+  --muted-foreground: #6b6b8a;
+  --accent: #F7931A;
+  --accent-foreground: #0a0a0f;
+  --destructive: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --border: #252535;
+  --border-strong: #3a3a50;
+  --input: #1e1e2e;
+  --ring: #F7931A;
+  --surface-0: #0a0a0f;
+  --surface-1: #111118;
+  --surface-2: #1a1a26;
+  --surface-3: #252535;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.font-display {
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+/* Shimmer animation for skeletons */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1a1a26 25%, #252535 50%, #1a1a26 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite linear;
+  border-radius: 4px;
+}
+
+/* Pulse animation for active status dot */
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
+}
+
+.pulse-dot {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: var(--surface-0); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
