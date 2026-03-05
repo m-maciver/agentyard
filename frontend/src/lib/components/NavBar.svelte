@@ -69,12 +69,12 @@
 	<!-- Mobile menu drawer -->
 	{#if menuOpen}
 		<div class="mobile-menu">
-			<a href="/" class="mobile-link" on:click={() => (menuOpen = false)}>Marketplace</a>
+			<a href="/" class="mobile-link" class:mobile-active={currentPath === '/'} on:click={() => (menuOpen = false)}>Marketplace</a>
 			{#if $isLoggedIn}
-				<a href="/dashboard" class="mobile-link" on:click={() => (menuOpen = false)}>Dashboard</a>
+				<a href="/dashboard" class="mobile-link" class:mobile-active={currentPath === '/dashboard'} on:click={() => (menuOpen = false)}>Dashboard</a>
 			{/if}
 			{#if isAdmin}
-				<a href="/admin" class="mobile-link" style="color: var(--destructive);" on:click={() => (menuOpen = false)}>Admin</a>
+				<a href="/admin" class="mobile-link mobile-admin" class:mobile-active={currentPath === '/admin'} on:click={() => (menuOpen = false)}>Admin</a>
 			{/if}
 			{#if !$isLoggedIn}
 				<a href="/dashboard" class="mobile-link" on:click={() => (menuOpen = false)}>Connect</a>
@@ -238,6 +238,14 @@
 		text-decoration: none;
 		padding: 8px 0;
 		border-bottom: 1px solid var(--border);
+	}
+
+	.mobile-link.mobile-active {
+		color: var(--primary);
+	}
+
+	.mobile-link.mobile-admin {
+		color: var(--destructive);
 	}
 
 	@media (max-width: 768px) {

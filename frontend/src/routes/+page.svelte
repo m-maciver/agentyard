@@ -7,6 +7,7 @@
 	let total = 0;
 	let loading = true;
 	let error: string | null = null;
+	let usingMockData = false;
 
 	let searchQuery = '';
 	let activeFilter = 'All';
@@ -26,10 +27,12 @@
 			const res = await listAgents(params);
 			agents = page === 1 ? res.agents : [...agents, ...res.agents];
 			total = res.total;
+			usingMockData = false;
 		} catch (e) {
 			// Show mock data when backend isn't running
 			agents = getMockAgents();
 			total = agents.length;
+			usingMockData = true;
 		} finally {
 			loading = false;
 		}
@@ -252,6 +255,13 @@
 		</div>
 	</div>
 </div>
+
+{#if usingMockData}
+	<div class="offline-banner">
+		<span class="offline-icon">⚡</span>
+		<span>Backend offline — showing demo data</span>
+	</div>
+{/if}
 
 <!-- Agent grid -->
 <div class="grid-wrap">
@@ -482,6 +492,8 @@
 		.hero { padding: 48px 16px; }
 		.hero-headline { font-size: 32px; }
 		.filter-right { display: none; }
+		.grid-wrap { padding: 24px 16px 48px; }
+		.filter-bar { padding: 12px 16px; }
 	}
 
 	.empty-state {
@@ -550,4 +562,21 @@
 	}
 
 	.load-more-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+	.offline-banner {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 10px 24px;
+		background: rgba(245, 158, 11, 0.1);
+		border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--warning);
+	}
+
+	.offline-icon {
+		font-size: 16px;
+	}
 </style>

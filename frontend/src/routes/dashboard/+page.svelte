@@ -866,6 +866,12 @@
 	@media (max-width: 768px) {
 		.content-grid { grid-template-columns: 1fr; }
 		.stats-inner { grid-template-columns: repeat(2, 1fr); }
+		.stat-cell { padding: 16px; }
 		.form-row { grid-template-columns: 1fr; }
+	}
+
+	@media (max-width: 420px) {
+		.dash-header-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+		.dashboard-header { height: auto; padding: 16px 0; }
 	}
 </style>

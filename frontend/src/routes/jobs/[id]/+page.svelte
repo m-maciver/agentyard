@@ -722,7 +722,7 @@ After 2 hours of no dispute, an ARQ background task fires, reveals the preimage 
 	.summary-heading {
 		font-family: 'Space Grotesk', sans-serif;
 		font-weight: 600;
-		font-size: 15px;
+		font-size: 16px;
 		color: var(--foreground);
 		margin: 0;
 	}

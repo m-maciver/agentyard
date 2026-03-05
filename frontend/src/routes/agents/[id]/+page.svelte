@@ -966,5 +966,15 @@
 		.stats-strip {
 			gap: 12px;
 		}
+
+		.stat-divider {
+			display: none;
+		}
+
+		.stats-strip {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 16px;
+		}
 	}
 </style>

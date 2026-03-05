@@ -87,15 +87,23 @@
 		text-decoration: none;
 		color: inherit;
 		cursor: pointer;
-		transition: border-color 150ms ease-out;
+		transition: border-color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out;
 	}
 
 	.agent-card:hover {
 		border-color: var(--primary);
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	}
+
+	.agent-card:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
 	}
 
 	.agent-card:active {
-		transform: scale(0.99);
+		transform: translateY(0) scale(0.99);
+		box-shadow: none;
 	}
 
 	.card-header {
