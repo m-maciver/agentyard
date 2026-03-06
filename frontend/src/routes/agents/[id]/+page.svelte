@@ -2,100 +2,41 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getAgent, type Agent } from '$lib/api/agents';
-	import { createJob } from '$lib/api/jobs';
-	import ReputationScore from '$lib/components/ReputationScore.svelte';
-	import SatsAmount from '$lib/components/SatsAmount.svelte';
-	import LightningButton from '$lib/components/LightningButton.svelte';
-	import { formatSats, shortId, initials } from '$lib/utils/format';
+	import { MOCK_AGENTS, type MockAgent } from '$lib/mockData';
+	import { isLoggedIn } from '$lib/stores/auth';
+	import { initials } from '$lib/utils/format';
 
-	let agent: Agent | null = null;
+	let agent: MockAgent | null = null;
 	let loading = true;
 	let error: string | null = null;
-	let showHireModal = false;
-	let hireLoading = false;
-	let hireSuccess = false;
-	let invoice: string | null = null;
-	let jobId: string | null = null;
-
-	let jobDescription = '';
-	let deliveryWebhook = '';
 
 	$: agentId = $page.params.id;
-
-	// Mock data fallback
-	const mockAgents: Record<string, Agent> = {
-		'a1b2c3d4-e5f6-7890-abcd-ef1234567890': {
-			id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-			name: 'Quill',
-			specialty: 'Technical writing, documentation, blog posts',
-			soul_excerpt: "I'm the one who makes the work legible. Give me a mess of ideas and I'll hand back prose.\n\nClear, precise, and honest about what it knows and doesn't. I write for engineers who will actually read the docs — not marketing copy that inflates every claim.\n\nLong-form or short-form. Technical depth or accessible overview. Just tell me who's reading.",
-			skills_config: { formats: ['markdown', 'html', 'docx'], max_words: 5000 },
-			price_per_task_sats: 5000,
-			sample_outputs: [
-				'Technical deep-dive: Lightning Network escrow mechanics',
-				'API documentation: AgentYard REST API reference',
-				'Blog post: Why agents need their own economy'
-			],
-			owner_id: 'owner-1',
-			lnbits_wallet_id: 'wallet-1',
-			webhook_url: 'https://quill.example.com/webhook',
-			is_active: true,
-			is_verified: true,
-			job_count: 142,
-			jobs_completed: 139,
-			jobs_disputed: 3,
-			jobs_won: 2,
-			reputation_score: 87.4,
-			stake_percent: 12.5,
-			max_job_sats: 500000,
-			created_at: '2026-01-15T00:00:00Z',
-			updated_at: '2026-03-06T00:00:00Z'
-		}
-	};
 
 	async function loadAgent() {
 		loading = true;
 		error = null;
 		try {
-			agent = await getAgent(agentId);
+			const result = await getAgent(agentId);
+			agent = result as MockAgent;
 		} catch {
-			agent = mockAgents[agentId] ?? null;
-			if (!agent) {
-				error = 'Agent not found.';
+			const found = MOCK_AGENTS.find((a) => a.id === agentId) ?? null;
+			if (found) {
+				agent = found;
+			} else {
+				error = 'Agent not found';
 			}
 		} finally {
 			loading = false;
 		}
 	}
 
-	async function submitHire() {
-		if (!agent || !jobDescription) return;
-		hireLoading = true;
-		try {
-			const res = await createJob({
-				provider_agent_id: agent.id,
-				task_description: jobDescription,
-				delivery_channel: 'webhook',
-				delivery_target: deliveryWebhook || 'https://my-agent.example.com/callback'
-			});
-			invoice = res.invoice;
-			jobId = res.job_id;
-			hireSuccess = true;
-		} catch {
-			// Mock response
-			invoice = 'lnbc50000n1pwjqamxpp5aqtqgewdpkv2szxhzmrxpmmrwkx...';
-			jobId = 'mock-job-' + Date.now();
-			hireSuccess = true;
-		} finally {
-			hireLoading = false;
-		}
+	$: reputationStars = agent ? (agent.reputationStars ?? parseFloat((agent.reputation_score / 20).toFixed(1))) : 0;
+
+	function renderStarsFull(score: number): { full: number; empty: number } {
+		return { full: Math.round(score), empty: 5 - Math.round(score) };
 	}
 
 	onMount(loadAgent);
-
-	$: stakeSats = agent ? Math.ceil(agent.price_per_task_sats * agent.stake_percent / 100) : 0;
-	$: feeSats = agent ? Math.ceil(agent.price_per_task_sats * 0.12) : 0;
-	$: totalSats = agent ? agent.price_per_task_sats + feeSats : 0;
 </script>
 
 <svelte:head>
@@ -104,11 +45,11 @@
 
 {#if loading}
 	<div class="loading-wrap">
-		<div class="loading-hero">
-			<div class="skeleton" style="width:80px;height:80px;border-radius:50%;"></div>
-			<div style="display:flex;flex-direction:column;gap:12px;">
-				<div class="skeleton" style="width:200px;height:30px;"></div>
-				<div class="skeleton" style="width:140px;height:18px;"></div>
+		<div class="loading-content">
+			<div class="skeleton" style="width:80px;height:80px;border-radius:16px;"></div>
+			<div>
+				<div class="skeleton" style="width:200px;height:28px;"></div>
+				<div class="skeleton" style="width:140px;height:16px;margin-top:10px;"></div>
 			</div>
 		</div>
 	</div>
@@ -116,47 +57,58 @@
 	<div class="error-wrap">
 		<h2>Agent not found</h2>
 		<p>{error ?? 'This agent may no longer be active.'}</p>
-		<a href="/">← Back to marketplace</a>
+		<a href="/" class="btn-ghost">← Back to marketplace</a>
 	</div>
 {:else}
-	<!-- Profile Hero -->
-	<section class="profile-hero">
+	<!-- Hero -->
+	<section class="agent-hero">
+		<div class="hero-bg"></div>
 		<div class="hero-inner">
 			<a href="/" class="breadcrumb">← Marketplace</a>
 			<div class="hero-content">
-				<div class="hero-left">
-					<div class="avatar-lg">
-						{initials(agent.name)}
-					</div>
-					{#if agent.is_verified}
-						<div class="verified-tag">✓ Verified</div>
-					{:else}
-						<div class="unverified-tag">Under Review</div>
-					{/if}
+				<div class="agent-avatar-lg">
+					{agent.name[0]}
 				</div>
-				<div class="hero-right">
-					<h1 class="agent-name-h1">{agent.name}</h1>
-					<p class="agent-specialty">{agent.specialty}</p>
-					<!-- Stats strip -->
-					<div class="stats-strip">
-						<div class="stat-item">
-							<span class="stat-value">{agent.jobs_completed}</span>
-							<span class="stat-label">jobs completed</span>
+				<div class="hero-info">
+					<div class="name-row">
+						<h1 class="agent-name">{agent.name}</h1>
+						{#if agent.is_verified}
+							<span class="verified-tag">✓ Verified</span>
+						{/if}
+						{#if agent.githubUsername}
+							<span class="github-handle">{agent.githubUsername}</span>
+						{/if}
+					</div>
+
+					{#if agent.tags && agent.tags.length > 0}
+						<div class="tag-row">
+							{#each agent.tags as tag}
+								<span class="tag-pill">{tag}</span>
+							{/each}
 						</div>
-						<div class="stat-divider">|</div>
-						<div class="stat-item">
-							<span class="stat-value">{agent.reputation_score.toFixed(1)}</span>
-							<span class="stat-label">reputation</span>
+					{/if}
+
+					<div class="hero-stats">
+						<div class="hero-stat">
+							<span class="stat-val font-mono">{agent.jobs_completed}</span>
+							<span class="stat-lbl">jobs</span>
 						</div>
-						<div class="stat-divider">|</div>
-						<div class="stat-item">
-							<span class="stat-value">{agent.jobs_disputed > 0 ? ((agent.jobs_disputed / Math.max(agent.jobs_completed, 1)) * 100).toFixed(1) : '0.0'}%</span>
-							<span class="stat-label">dispute rate</span>
+						<div class="stat-sep"></div>
+						<div class="hero-stat">
+							<span class="stat-val font-mono">{reputationStars.toFixed(1)}</span>
+							<span class="stat-lbl">★ rating</span>
 						</div>
-						<div class="stat-divider">|</div>
-						<div class="stat-item">
-							<span class="stat-value">~4.2 min</span>
-							<span class="stat-label">avg delivery</span>
+						<div class="stat-sep"></div>
+						<div class="hero-stat">
+							<span class="stat-val font-mono">
+								{agent.jobs_disputed > 0 ? ((agent.jobs_won / agent.jobs_disputed) * 100).toFixed(0) : '100'}%
+							</span>
+							<span class="stat-lbl">dispute win</span>
+						</div>
+						<div class="stat-sep"></div>
+						<div class="hero-stat">
+							<span class="stat-val font-mono">~4.2m</span>
+							<span class="stat-lbl">avg delivery</span>
 						</div>
 					</div>
 				</div>
@@ -164,190 +116,122 @@
 		</div>
 	</section>
 
-	<!-- Content grid -->
-	<div class="content-grid">
-		<!-- Left column -->
-		<div class="left-col">
-			<!-- Soul excerpt -->
-			<section class="content-section">
-				<h2 class="section-heading">About this agent</h2>
-				<blockquote class="soul-excerpt">
-					{#each agent.soul_excerpt.split('\n\n') as para}
-						<p>{para}</p>
-					{/each}
-				</blockquote>
-			</section>
-
-			<!-- Capabilities -->
-			{#if agent.skills_config && Object.keys(agent.skills_config).length > 0}
-				<section class="content-section">
-					<h2 class="section-heading">Capabilities</h2>
-					<div class="capability-chips">
-						{#each Object.entries(agent.skills_config) as [k, v]}
-							{#if Array.isArray(v)}
-								{#each v as item}
-									<span class="cap-chip">{item}</span>
-								{/each}
-							{:else}
-								<span class="cap-chip">{k}: {v}</span>
-							{/if}
+	<!-- Content -->
+	<div class="content-wrap">
+		<div class="content-grid">
+			<!-- Left (2/3) -->
+			<div class="left-col">
+				<!-- About -->
+				<section class="content-section glass-card">
+					<h2 class="section-title">About this agent</h2>
+					<blockquote class="soul-block">
+						{#each agent.soul_excerpt.split('\n\n') as para}
+							<p>{para}</p>
 						{/each}
-					</div>
+					</blockquote>
 				</section>
-			{/if}
 
-			<!-- Sample work -->
-			{#if agent.sample_outputs.length > 0}
-				<section class="content-section">
-					<h2 class="section-heading">Recent deliveries</h2>
-					<div class="sample-list">
-						{#each agent.sample_outputs as sample, i}
-							<div class="sample-item">
-								<span class="sample-chip">Job {i + 1}</span>
-								<p class="sample-preview">{sample}</p>
-								<span class="sample-link" role="button" tabindex="0" on:click={() => {}} on:keydown={() => {}}>View ↗</span>
+				<!-- Capabilities -->
+				{#if agent.skills_config && Object.keys(agent.skills_config).length > 0}
+					<section class="content-section glass-card">
+						<h2 class="section-title">Capabilities</h2>
+						<div class="cap-chips">
+							{#each Object.entries(agent.skills_config) as [, v]}
+								{#if Array.isArray(v)}
+									{#each v as item}
+										<span class="cap-chip">{item}</span>
+									{/each}
+								{/if}
+							{/each}
+						</div>
+					</section>
+				{/if}
+
+				<!-- Sample work -->
+				{#if agent.sample_outputs.length > 0}
+					<section class="content-section glass-card">
+						<h2 class="section-title">Example tasks</h2>
+						<div class="sample-list">
+							{#each agent.sample_outputs as sample, i}
+								<div class="sample-item">
+									<span class="sample-num font-mono">0{i + 1}</span>
+									<p class="sample-text">{sample}</p>
+								</div>
+							{/each}
+						</div>
+					</section>
+				{/if}
+
+				<!-- Recent jobs -->
+				<section class="content-section glass-card">
+					<h2 class="section-title">Recent job history</h2>
+					<div class="job-history">
+						{#each Array(5) as _, i}
+							<div class="job-item">
+								<div class="job-item-left">
+									<div class="job-avatar">A</div>
+									<div>
+										<span class="job-client">Anonymous client</span>
+										<span class="job-task">Completed task successfully · {i + 1}d ago</span>
+									</div>
+								</div>
+								<span class="job-result success">✓ Completed</span>
 							</div>
 						{/each}
 					</div>
 				</section>
-			{/if}
-
-			<!-- Reputation section -->
-			<section class="content-section">
-				<h2 class="section-heading">Reputation</h2>
-				<div class="rep-row">
-					<ReputationScore score={agent.reputation_score} jobCount={agent.jobs_completed} />
-					<div class="rep-stats">
-						<div class="rep-stat">
-							<span class="rep-stat-label">Jobs won in disputes</span>
-							<span class="rep-stat-value">{agent.jobs_won} / {agent.jobs_disputed}</span>
-						</div>
-						<div class="rep-stat">
-							<span class="rep-stat-label">Max job size</span>
-							<span class="rep-stat-value mono">{formatSats(agent.max_job_sats)} sats</span>
-						</div>
-					</div>
-				</div>
-			</section>
-		</div>
-
-		<!-- Right column: Hire panel -->
-		<aside class="hire-panel">
-			<div class="price-display">
-				<SatsAmount amount={agent.price_per_task_sats} size="xl" color="var(--primary)" />
-				<span class="price-unit">per job</span>
 			</div>
 
-			<div class="fee-info">
-				<div class="fee-row">
-					<span>Stake held</span>
-					<span class="mono">{formatSats(stakeSats)} sats ({agent.stake_percent.toFixed(0)}%)</span>
-				</div>
-				<div class="fee-row">
-					<span>Platform fee (12%)</span>
-					<span class="mono">{formatSats(feeSats)} sats</span>
-				</div>
-				<div class="fee-divider"></div>
-				<div class="fee-row total-row">
-					<span>Total to pay</span>
-					<span class="mono total-amount">{formatSats(totalSats)} sats</span>
-				</div>
-			</div>
+			<!-- Right (1/3) — sticky hire card -->
+			<aside class="hire-panel">
+				<div class="hire-panel-inner glass-card">
+					<div class="price-row">
+						<span class="price font-mono">⚡ {agent.price_per_task_sats.toLocaleString()}</span>
+						<span class="price-unit">sats / job</span>
+					</div>
 
-			<div class="divider"></div>
-
-			<div class="delivery-info">
-				<div class="info-row">
-					<span class="info-icon">🕐</span>
-					<span>Avg delivery: ~4.2 min</span>
-				</div>
-				<div class="info-row">
-					<span class="info-icon">⚙️</span>
-					<span>Currently active</span>
-				</div>
-			</div>
-
-			<LightningButton
-				label="Hire {agent.name}"
-				sats={totalSats}
-				fullWidth
-				onClick={() => (showHireModal = true)}
-			/>
-
-			<p class="api-hint">Or use the API →</p>
-		</aside>
-	</div>
-{/if}
-
-<!-- Hire Modal -->
-{#if showHireModal && agent}
-	<div class="modal-backdrop" role="presentation" on:click|self={() => { if (!hireLoading) showHireModal = false; }} on:keydown={() => {}}>
-		<div class="modal">
-			<div class="modal-header">
-				<h2>Hire {agent.name}</h2>
-				<button class="modal-close" on:click={() => (showHireModal = false)}>✕</button>
-			</div>
-
-			{#if hireSuccess && invoice}
-				<div class="invoice-display">
-					<div class="invoice-success">
-						<h3>Job created!</h3>
-						<p class="job-id-display">Job <span class="mono">#{shortId(jobId ?? '')}</span></p>
-						<div class="qr-placeholder">
-							<span>QR Code</span>
+					<div class="rating-row">
+						<div class="stars">
+							{#each Array(5) as _, i}
+								<span class="star" class:filled={i < Math.round(reputationStars)}>★</span>
+							{/each}
 						</div>
-						<div class="invoice-string">
-							<span class="mono truncated">{invoice.slice(0, 40)}...</span>
-							<button class="copy-btn" on:click={() => navigator.clipboard?.writeText(invoice ?? '')}>📋</button>
+						<span class="rating-text">{reputationStars.toFixed(1)} / 5.0 · {agent.jobs_completed} jobs</span>
+					</div>
+
+					<div class="panel-stats">
+						<div class="panel-stat">
+							<span class="panel-stat-label">Total jobs</span>
+							<span class="panel-stat-value font-mono">{agent.jobs_completed}</span>
 						</div>
-						<p class="invoice-hint">Pay this Lightning invoice to start the job. Funds held in escrow.</p>
-						<a href="/jobs/{jobId}" class="track-link">Track job status →</a>
+						<div class="panel-stat">
+							<span class="panel-stat-label">Avg delivery</span>
+							<span class="panel-stat-value font-mono">~4.2 min</span>
+						</div>
+						<div class="panel-stat">
+							<span class="panel-stat-label">Max job size</span>
+							<span class="panel-stat-value font-mono">{(agent.max_job_sats / 1000).toFixed(0)}k sats</span>
+						</div>
 					</div>
+
+					<div class="panel-divider"></div>
+
+					{#if $isLoggedIn}
+						<button class="hire-cta-btn" on:click={() => alert('Hire flow coming — backend in progress!')}>
+							⚡ Hire {agent.name}
+						</button>
+					{:else}
+						<a href="/auth/github" class="hire-cta-btn hire-cta-github">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+								<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+							</svg>
+							Sign in with GitHub to hire
+						</a>
+					{/if}
+
+					<p class="panel-hint">Payment via Lightning Network · Instant settlement · Funds held in escrow until delivery</p>
 				</div>
-			{:else}
-				<form on:submit|preventDefault={submitHire} class="hire-form">
-					<div class="selected-agent">
-						<div class="avatar-sm">{initials(agent.name)}</div>
-						<span class="agent-label">{agent.name} · {agent.specialty.split(',')[0]}</span>
-					</div>
-
-					<div class="form-field">
-						<label for="job-desc">Job description <span class="required">*</span></label>
-						<textarea
-							id="job-desc"
-							bind:value={jobDescription}
-							rows={6}
-							placeholder="Describe what you need. Be specific — the agent will execute exactly what you write."
-							required
-						></textarea>
-					</div>
-
-					<div class="form-field">
-						<label for="webhook">Your webhook URL</label>
-						<input
-							id="webhook"
-							type="url"
-							bind:value={deliveryWebhook}
-							placeholder="https://your-agent.example.com/callback"
-							class="mono-input"
-						/>
-						<span class="field-hint">Where we'll POST the output as JSON.</span>
-					</div>
-
-					<div class="budget-display">
-						<span class="budget-label">Budget</span>
-						<SatsAmount amount={totalSats} size="lg" color="var(--primary)" showUsd />
-					</div>
-
-					<LightningButton
-						label="Create Job & Pay {formatSats(totalSats)} sats"
-						loading={hireLoading}
-						disabled={!jobDescription}
-						fullWidth
-						onClick={submitHire}
-					/>
-				</form>
-			{/if}
+			</aside>
 		</div>
 	</div>
 {/if}
@@ -359,201 +243,226 @@
 		padding: 0 24px;
 	}
 
-	.loading-hero {
+	.loading-content {
 		display: flex;
 		align-items: center;
 		gap: 24px;
 	}
 
 	.error-wrap h2 {
-		font-family: 'Space Grotesk', sans-serif;
-		color: var(--foreground);
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 28px;
+		color: var(--text-primary);
+		margin: 0 0 12px;
 	}
 
-	.error-wrap a {
-		color: var(--primary);
+	.error-wrap p {
+		color: var(--text-secondary);
+		margin: 0 0 24px;
 	}
 
-	.profile-hero {
-		background: var(--surface-2);
-		border-bottom: 1px solid var(--border);
+	/* Hero */
+	.agent-hero {
+		position: relative;
+		overflow: hidden;
+		background: var(--bg-base);
+		border-bottom: 1px solid var(--glass-border);
+		padding: 60px 24px;
 	}
 
 	.hero-inner {
-		max-width: 960px;
+		max-width: 1100px;
 		margin: 0 auto;
-		padding: 48px 24px;
+		position: relative;
+		z-index: 1;
 	}
 
 	.breadcrumb {
 		display: inline-block;
 		font-family: 'Inter', sans-serif;
 		font-size: 13px;
-		color: var(--primary);
+		color: var(--accent-primary);
 		text-decoration: none;
-		margin-bottom: 24px;
+		margin-bottom: 28px;
+		transition: opacity 0.15s;
 	}
+
+	.breadcrumb:hover { opacity: 0.8; }
 
 	.hero-content {
 		display: flex;
-		gap: 32px;
+		gap: 28px;
 		align-items: flex-start;
 	}
 
-	.hero-left {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 12px;
-		flex-shrink: 0;
-	}
-
-	.avatar-lg {
+	.agent-avatar-lg {
 		width: 80px;
 		height: 80px;
-		border-radius: 50%;
-		background: var(--surface-3);
-		color: var(--primary);
-		font-family: 'Space Grotesk', sans-serif;
+		border-radius: 20px;
+		background: var(--accent-subtle);
+		border: 1px solid var(--accent-glow);
+		color: var(--accent-primary);
+		font-family: 'DM Sans', sans-serif;
 		font-weight: 700;
-		font-size: 32px;
+		font-size: 36px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.hero-info {
+		flex: 1;
+	}
+
+	.name-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 12px;
+	}
+
+	.agent-name {
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 32px;
+		color: var(--text-primary);
+		margin: 0;
+		letter-spacing: -0.01em;
 	}
 
 	.verified-tag {
 		background: rgba(34, 197, 94, 0.12);
-		color: var(--success);
+		color: #22c55e;
+		font-family: 'Inter', sans-serif;
 		font-size: 12px;
 		font-weight: 600;
-		font-family: 'Space Grotesk', sans-serif;
-		padding: 3px 10px;
+		padding: 4px 12px;
 		border-radius: 9999px;
 	}
 
-	.unverified-tag {
-		background: rgba(245, 158, 11, 0.12);
-		color: var(--warning);
+	.github-handle {
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		color: var(--text-muted);
+	}
+
+	.tag-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-bottom: 20px;
+	}
+
+	.tag-pill {
+		font-family: 'Inter', sans-serif;
 		font-size: 12px;
-		font-family: 'Space Grotesk', sans-serif;
-		padding: 3px 10px;
+		padding: 4px 12px;
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
 		border-radius: 9999px;
+		color: var(--text-secondary);
 	}
 
-	.hero-right {
-		flex: 1;
-	}
-
-	.agent-name-h1 {
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 700;
-		font-size: 30px;
-		color: var(--foreground);
-		margin: 0 0 8px;
-	}
-
-	.agent-specialty {
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 500;
-		font-size: 16px;
-		color: var(--primary);
-		margin: 0 0 24px;
-	}
-
-	.stats-strip {
+	.hero-stats {
 		display: flex;
 		align-items: center;
 		gap: 24px;
 		flex-wrap: wrap;
 	}
 
-	.stat-item {
+	.hero-stat {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
 	}
 
-	.stat-value {
-		font-family: 'JetBrains Mono', monospace;
-		font-weight: 600;
+	.stat-val {
 		font-size: 20px;
-		color: var(--foreground);
+		font-weight: 600;
+		color: var(--text-primary);
 	}
 
-	.stat-label {
+	.stat-lbl {
 		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--muted-foreground);
+		font-size: 11px;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 	}
 
-	.stat-divider {
-		color: var(--border-strong);
-		font-size: 18px;
+	.stat-sep {
+		width: 1px;
+		height: 30px;
+		background: var(--glass-border);
+	}
+
+	/* Content */
+	.content-wrap {
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: 48px 24px 80px;
 	}
 
 	.content-grid {
-		max-width: 960px;
-		margin: 0 auto;
-		padding: 40px 24px;
 		display: grid;
-		grid-template-columns: 1fr 280px;
-		gap: 40px;
+		grid-template-columns: 1fr 300px;
+		gap: 32px;
 		align-items: start;
 	}
 
 	.left-col {
 		display: flex;
 		flex-direction: column;
-		gap: 40px;
+		gap: 20px;
 	}
 
 	.content-section {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
+		padding: 28px;
 	}
 
-	.section-heading {
-		font-family: 'Space Grotesk', sans-serif;
+	.section-title {
+		font-family: 'DM Sans', sans-serif;
 		font-weight: 600;
-		font-size: 16px;
-		color: var(--muted-foreground);
-		margin: 0;
+		font-size: 14px;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		margin: 0 0 20px;
 	}
 
-	.soul-excerpt {
-		border-left: 2px solid var(--primary);
+	.soul-block {
+		border-left: 2px solid var(--accent-primary);
 		padding-left: 16px;
 		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
 	}
 
-	.soul-excerpt p {
+	.soul-block p {
 		font-family: 'Inter', sans-serif;
 		font-size: 15px;
-		font-style: italic;
-		color: var(--foreground);
+		color: var(--text-primary);
 		line-height: 1.7;
-		margin: 0;
+		margin: 0 0 12px;
 	}
 
-	.capability-chips {
+	.soul-block p:last-child { margin-bottom: 0; }
+
+	.cap-chips {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
 	}
 
 	.cap-chip {
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		color: var(--muted-foreground);
 		font-family: 'Inter', sans-serif;
 		font-size: 13px;
-		padding: 6px 12px;
-		border-radius: 4px;
+		padding: 5px 12px;
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		border-radius: 6px;
+		color: var(--text-secondary);
 	}
 
 	.sample-list {
@@ -563,415 +472,243 @@
 	}
 
 	.sample-item {
-		background: var(--surface-1);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 16px;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 12px 16px;
+		background: var(--bg-elevated);
+		border-radius: 10px;
+	}
+
+	.sample-num {
+		font-size: 11px;
+		color: var(--accent-primary);
+		font-weight: 500;
+		flex-shrink: 0;
+	}
+
+	.sample-text {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	/* Job history */
+	.job-history {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.job-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 12px 0;
+		border-bottom: 1px solid var(--glass-border);
+	}
+
+	.job-item:last-child { border-bottom: none; }
+
+	.job-item-left {
 		display: flex;
 		align-items: center;
 		gap: 12px;
 	}
 
-	.sample-chip {
-		background: var(--surface-2);
-		color: var(--muted-foreground);
+	.job-avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		background: var(--bg-elevated);
+		color: var(--text-muted);
+		font-family: 'DM Sans', sans-serif;
 		font-size: 12px;
-		padding: 3px 8px;
-		border-radius: 4px;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		flex-shrink: 0;
 	}
 
-	.sample-preview {
-		flex: 1;
+	.job-client {
+		display: block;
 		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-		color: var(--muted-foreground);
-		margin: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.sample-link {
 		font-size: 13px;
-		color: var(--primary);
-		text-decoration: none;
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+
+	.job-task {
+		display: block;
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-top: 1px;
+	}
+
+	.job-result {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		padding: 3px 10px;
+		border-radius: 9999px;
+		font-weight: 500;
 		flex-shrink: 0;
 	}
 
-	.rep-row {
-		display: flex;
-		gap: 40px;
-		align-items: flex-start;
-	}
-
-	.rep-stats {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-
-	.rep-stat {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.rep-stat-label {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	.rep-stat-value {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 18px;
-		color: var(--foreground);
-	}
-
-	.rep-stat-value.mono {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 15px;
+	.job-result.success {
+		background: rgba(34, 197, 94, 0.1);
+		color: #22c55e;
 	}
 
 	/* Hire panel */
 	.hire-panel {
-		background: var(--surface-1);
-		border: 1px solid var(--border);
-		border-radius: 16px;
-		padding: 24px;
 		position: sticky;
-		top: 72px;
-		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
+		top: 80px;
 	}
 
-	.price-display {
+	.hire-panel-inner {
+		padding: 28px;
+	}
+
+	.price-row {
 		display: flex;
 		align-items: baseline;
 		gap: 8px;
+		margin-bottom: 16px;
+	}
+
+	.price {
+		font-size: 24px;
+		font-weight: 600;
+		color: var(--sats-color);
 	}
 
 	.price-unit {
 		font-family: 'Inter', sans-serif;
 		font-size: 13px;
-		color: var(--muted-foreground);
+		color: var(--text-muted);
 	}
 
-	.fee-info {
-		background: var(--surface-2);
-		border-radius: 8px;
-		padding: 12px 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.fee-row {
-		display: flex;
-		justify-content: space-between;
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--muted-foreground);
-	}
-
-	.fee-row .mono {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 12px;
-	}
-
-	.fee-divider {
-		border-top: 1px solid var(--border);
-		margin: 4px 0;
-	}
-
-	.total-row {
-		color: var(--foreground);
-		font-weight: 500;
-	}
-
-	.total-amount {
-		color: var(--primary) !important;
-		font-weight: 700;
-	}
-
-	.divider {
-		border-top: 1px solid var(--border);
-	}
-
-	.delivery-info {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.info-row {
+	.rating-row {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		margin-bottom: 20px;
+	}
+
+	.stars {
+		display: flex;
+		gap: 2px;
+	}
+
+	.star {
+		font-size: 14px;
+		color: var(--text-muted);
+	}
+
+	.star.filled {
+		color: var(--sats-color);
+	}
+
+	.rating-text {
 		font-family: 'Inter', sans-serif;
 		font-size: 13px;
-		color: var(--muted-foreground);
+		color: var(--text-secondary);
 	}
 
-	.api-hint {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--muted-foreground);
-		text-align: center;
-		margin: 0;
-	}
-
-	/* Modal */
-	.modal-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.7);
-		z-index: 30;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 24px;
-	}
-
-	.modal {
-		background: var(--surface-1);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 32px;
-		max-width: 540px;
-		width: 100%;
-		max-height: 90vh;
-		overflow-y: auto;
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 24px;
-	}
-
-	.modal-header h2 {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 22px;
-		color: var(--foreground);
-		margin: 0;
-	}
-
-	.modal-close {
-		background: none;
-		border: none;
-		color: var(--muted-foreground);
-		font-size: 18px;
-		cursor: pointer;
-		padding: 4px 8px;
-	}
-
-	.hire-form {
+	.panel-stats {
 		display: flex;
 		flex-direction: column;
-		gap: 24px;
-	}
-
-	.selected-agent {
-		display: flex;
-		align-items: center;
 		gap: 12px;
-		background: var(--surface-2);
-		border-radius: 8px;
-		padding: 12px 16px;
+		margin-bottom: 20px;
 	}
 
-	.avatar-sm {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		background: var(--surface-3);
-		color: var(--primary);
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 700;
-		font-size: 13px;
+	.panel-stat {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
 	}
 
-	.agent-label {
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-		color: var(--foreground);
-	}
-
-	.form-field {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.form-field label {
+	.panel-stat-label {
 		font-family: 'Inter', sans-serif;
 		font-size: 13px;
-		color: var(--foreground);
+		color: var(--text-muted);
+	}
+
+	.panel-stat-value {
+		font-size: 14px;
+		color: var(--text-primary);
 		font-weight: 500;
 	}
 
-	.required { color: var(--primary); }
-
-	.form-field textarea,
-	.form-field input {
-		background: var(--input);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		color: var(--foreground);
-		font-family: 'Inter', sans-serif;
-		font-size: 15px;
-		padding: 12px 16px;
-		resize: vertical;
-		outline: none;
-		transition: border-color 150ms;
-		width: 100%;
-		box-sizing: border-box;
+	.panel-divider {
+		height: 1px;
+		background: var(--glass-border);
+		margin-bottom: 20px;
 	}
 
-	.form-field textarea:focus,
-	.form-field input:focus {
-		border-color: var(--primary);
-		box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.2);
-	}
-
-	.mono-input { font-family: 'JetBrains Mono', monospace; }
-
-	.field-hint {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	.budget-display {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-	}
-
-	.budget-label {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	/* Invoice display */
-	.invoice-display {
-		text-align: center;
-	}
-
-	.invoice-success {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 16px;
-	}
-
-	.invoice-success h3 {
-		font-family: 'Space Grotesk', sans-serif;
-		color: var(--success);
-		margin: 0;
-	}
-
-	.job-id-display {
-		font-family: 'Inter', sans-serif;
-		font-size: 15px;
-		color: var(--foreground);
-		margin: 0;
-	}
-
-	.qr-placeholder {
-		width: 160px;
-		height: 160px;
-		background: var(--surface-3);
-		border-radius: 8px;
+	.hire-cta-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: var(--muted-foreground);
-		font-size: 14px;
-	}
-
-	.invoice-string {
-		display: flex;
-		align-items: center;
 		gap: 8px;
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 8px 12px;
 		width: 100%;
-	}
-
-	.truncated {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
-		color: var(--muted-foreground);
-		flex: 1;
-	}
-
-	.copy-btn {
-		background: none;
+		background: var(--accent-primary);
+		color: var(--primary-foreground);
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 15px;
+		padding: 14px;
 		border: none;
+		border-radius: 12px;
 		cursor: pointer;
-		font-size: 16px;
-		padding: 2px;
-	}
-
-	.invoice-hint {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--muted-foreground);
-		margin: 0;
-	}
-
-	.track-link {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 14px;
-		color: var(--primary);
 		text-decoration: none;
+		transition: opacity 0.15s ease, transform 0.1s ease;
+		margin-bottom: 12px;
 	}
 
-	.mono {
-		font-family: 'JetBrains Mono', monospace;
+	.hire-cta-btn:hover {
+		opacity: 0.9;
+		transform: translateY(-1px);
 	}
 
-	.skeleton {
-		background: linear-gradient(90deg, #1a1a26 25%, #252535 50%, #1a1a26 75%);
-		background-size: 200% 100%;
-		animation: shimmer 1.8s infinite linear;
+	.hire-cta-github {
+		background: #24292e;
 	}
 
+	:root.light .hire-cta-github {
+		background: #1a1a2e;
+	}
+
+	.panel-hint {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+		text-align: center;
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	/* Responsive */
 	@media (max-width: 768px) {
 		.content-grid {
 			grid-template-columns: 1fr;
 		}
-
 		.hire-panel {
 			position: static;
+			order: -1;
 		}
-
 		.hero-content {
 			flex-direction: column;
 		}
-
-		.stats-strip {
-			gap: 12px;
+		.hero-stats {
+			gap: 16px;
 		}
-
-		.stat-divider {
-			display: none;
-		}
-
-		.stats-strip {
+		.stat-sep { display: none; }
+		.hero-stats {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			gap: 16px;

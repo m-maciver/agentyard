@@ -1,877 +1,673 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { listJobs, type Job } from '$lib/api/jobs';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import SatsAmount from '$lib/components/SatsAmount.svelte';
-	import { shortId, timeAgo, formatSats } from '$lib/utils/format';
+	import { authStore, isLoggedIn } from '$lib/stores/auth';
+	import { MOCK_AGENTS, MOCK_HIRES } from '$lib/mockData';
+	import type { GitHubUser } from '$lib/auth';
 
-	let jobs: Job[] = [];
-	let loading = true;
-	let walletBalance = 12400;
-	let activeTab: 'jobs' | 'settings' = 'jobs';
+	let user: GitHubUser | null = null;
+	let agentActive = true;
 
-	const mockJobs: Job[] = [
-		{
-			id: 'j1a2b3c4-d5e6-7890-abcd-ef1234567891',
-			client_agent_id: 'client-1',
-			provider_agent_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-			status: 'in_progress',
-			task_description: 'Write a 500-word technical blog post about Lightning Network escrow mechanics for developers.',
-			task_input: { topic: 'Lightning Network escrow', word_count: 500 },
-			price_sats: 5000,
-			fee_sats: 600,
-			stake_sats: 625,
-			client_invoice: 'lnbc5600n1...',
-			payment_hash: 'abc123',
-			delivery_channel: 'webhook',
-			delivery_target: 'https://jet.example.com/callback',
-			created_at: new Date(Date.now() - 8 * 60000).toISOString(),
-		},
-		{
-			id: 'j2b3c4d5-e6f7-8901-bcde-f12345678902',
-			client_agent_id: 'client-1',
-			provider_agent_id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-			status: 'delivered',
-			task_description: 'Research the top 5 Lightning Network wallets by transaction volume in Q1 2026.',
-			task_input: { topic: 'LN wallets', period: 'Q1 2026' },
-			price_sats: 3500,
-			fee_sats: 420,
-			stake_sats: 280,
-			client_invoice: 'lnbc3920n1...',
-			payment_hash: 'def456',
-			delivery_channel: 'webhook',
-			delivery_target: 'https://jet.example.com/callback',
-			auto_release_at: new Date(Date.now() + 45 * 60000).toISOString(),
-			output_payload: { type: 'text', content: 'Research complete...' },
-			delivered_at: new Date(Date.now() - 22 * 60000).toISOString(),
-			created_at: new Date(Date.now() - 35 * 60000).toISOString(),
-		},
-		{
-			id: 'j3c4d5e6-f7a8-9012-cdef-123456789013',
-			client_agent_id: 'client-1',
-			provider_agent_id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
-			status: 'complete',
-			task_description: 'Security audit of the AgentYard smart escrow logic.',
-			task_input: { scope: 'escrow logic', depth: 'full' },
-			price_sats: 15000,
-			fee_sats: 1800,
-			stake_sats: 750,
-			client_invoice: 'lnbc16800n1...',
-			payment_hash: 'ghi789',
-			delivery_channel: 'webhook',
-			delivery_target: 'https://jet.example.com/callback',
-			created_at: new Date(Date.now() - 3 * 3600000).toISOString(),
-			delivered_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-			completed_at: new Date(Date.now() - 90 * 60000).toISOString(),
+	const mockStats = {
+		totalEarned: 48200,
+		jobsCompleted: 23,
+		activeListings: 1,
+		avgRating: 4.7
+	};
+
+	const recentHires = MOCK_HIRES.slice(0, 5);
+	const recentEarnings = [
+		{ date: '2026-03-06', from: '@atlas-bot', task: 'Research brief', sats: 2500 },
+		{ date: '2026-03-05', from: '@jet-ai', task: 'Competitive analysis', sats: 3200 },
+		{ date: '2026-03-04', from: '@scout-agent', task: 'Market sizing report', sats: 2500 },
+		{ date: '2026-03-03', from: '@cipher-sec', task: 'Security documentation', sats: 4000 },
+		{ date: '2026-03-02', from: '@quill-writer', task: 'Content strategy', sats: 1800 }
+	];
+
+	onMount(() => {
+		user = $authStore;
+		if (!user) {
+			goto('/?signin=required');
 		}
-	];
+	});
 
-	const transactions = [
-		{ id: 't1', type: 'escrow_in', description: 'Job #j1a2b3c4 — Quill · writing', amount: -5600, timestamp: new Date(Date.now() - 8 * 60000).toISOString(), status: 'in_progress' as const },
-		{ id: 't2', type: 'escrow_in', description: 'Job #j2b3c4d5 — Scout · research', amount: -3920, timestamp: new Date(Date.now() - 35 * 60000).toISOString(), status: 'delivered' as const },
-		{ id: 't3', type: 'complete', description: 'Job #j3c4d5e6 — Cipher · security', amount: -16800, timestamp: new Date(Date.now() - 3 * 3600000).toISOString(), status: 'complete' as const },
-	];
-
-	const previousAgents = [
-		{ id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Quill', specialty: 'Writing' },
-		{ id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', name: 'Scout', specialty: 'Research' },
-		{ id: 'c3d4e5f6-a7b8-9012-cdef-123456789012', name: 'Cipher', specialty: 'Security' },
-	];
-
-	async function loadJobs() {
-		loading = true;
-		try {
-			const res = await listJobs();
-			jobs = res.jobs;
-		} catch {
-			jobs = mockJobs;
-		} finally {
-			loading = false;
-		}
+	$: user = $authStore;
+	$: if (typeof window !== 'undefined' && !$isLoggedIn) {
+		goto('/?signin=required');
 	}
 
-	onMount(loadJobs);
-
-	$: activeJobs = jobs.filter(j => ['in_progress', 'escrowed', 'awaiting_payment', 'delivered'].includes(j.status));
-	$: completedJobs = jobs.filter(j => j.status === 'complete');
-	$: totalSpent = jobs.reduce((sum, j) => sum + j.price_sats + j.fee_sats, 0);
+	function formatDate(dateStr: string) {
+		return new Date(dateStr).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+	}
 </script>
 
 <svelte:head>
 	<title>Dashboard — AgentYard</title>
 </svelte:head>
 
-<!-- Dashboard header -->
-<div class="dashboard-header">
-	<div class="dash-header-inner">
-		<h1 class="dash-title">Dashboard</h1>
-		<div class="wallet-widget">
-			<div class="wallet-balance">
-				<span class="balance-value">⚡ <span class="mono">{formatSats(walletBalance)} sats</span></span>
-				<span class="balance-usd">≈ $11.78 USD</span>
-			</div>
-			<a href="#topup" class="topup-link">Top up →</a>
-		</div>
-	</div>
-</div>
-
-<!-- Stats strip -->
-<div class="stats-strip">
-	<div class="stats-inner">
-		<div class="stat-cell">
-			<span class="stat-label">Active Jobs</span>
-			<span class="stat-value">{activeJobs.length}</span>
-			{#if activeJobs.length > 0}
-				<span class="stat-delta success">▲ {activeJobs.length} running</span>
-			{/if}
-		</div>
-		<div class="stat-cell">
-			<span class="stat-label">Completed Jobs</span>
-			<span class="stat-value">{completedJobs.length}</span>
-		</div>
-		<div class="stat-cell">
-			<span class="stat-label">Total Spent</span>
-			<span class="stat-value mono">{formatSats(totalSpent)}</span>
-		</div>
-		<div class="stat-cell">
-			<span class="stat-label">Avg Delivery</span>
-			<span class="stat-value">~4.2 min</span>
-		</div>
-	</div>
-</div>
-
-<!-- Main content -->
-<div class="content-grid">
-	<!-- Left: Active jobs -->
-	<div class="left-col">
-		<div class="section-header">
-			<h2 class="section-title">Active Jobs</h2>
-			{#if activeJobs.length > 0}
-				<span class="count-badge blue">{activeJobs.length}</span>
-			{/if}
-		</div>
-
-		{#if loading}
-			{#each Array(3) as _}
-				<div class="job-skeleton skeleton"></div>
-			{/each}
-		{:else if jobs.length === 0}
-			<div class="empty-state">
-				<svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-					<rect x="12" y="16" width="40" height="36" rx="4" stroke="var(--border-strong)" stroke-width="1.5"/>
-					<path d="M22 28h20M22 36h12" stroke="var(--border-strong)" stroke-width="1.5" stroke-linecap="round"/>
+{#if !$isLoggedIn}
+	<div class="auth-prompt">
+		<div class="auth-prompt-inner glass-card">
+			<div class="auth-icon">🔒</div>
+			<h2>Sign in to access your dashboard</h2>
+			<p>Connect your GitHub account to manage your agent listings, view hire history, and access your wallet.</p>
+			<a href="/auth/github" class="btn-github">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
 				</svg>
-				<h3>No jobs yet</h3>
-				<p>Hire an agent to start your first job.</p>
-				<a href="/" class="cta-link">Browse agents →</a>
-			</div>
-		{:else}
-			<div class="job-list">
-				{#each jobs as job (job.id)}
-					<a href="/jobs/{job.id}" class="job-item">
-						<div class="job-top">
-							<div class="job-agent-info">
-								<div class="job-avatar">
-									{job.provider_agent_id.slice(0, 1).toUpperCase()}
-								</div>
-								<div class="job-meta">
-									<span class="job-agent-name">Agent #{shortId(job.provider_agent_id)}</span>
-									<span class="job-id mono">#{shortId(job.id)}</span>
-								</div>
-							</div>
-							<StatusBadge status={job.status} />
-						</div>
-						<p class="job-desc">{job.task_description}</p>
-						<div class="job-bottom">
-							<span class="stake-chip">🔒 {formatSats(job.stake_sats)} sats staked</span>
-							<span class="job-time mono">{timeAgo(job.created_at)}</span>
-						</div>
-					</a>
-				{/each}
-			</div>
-		{/if}
-	</div>
-
-	<!-- Right: sidebar -->
-	<div class="right-sidebar">
-		<!-- Transaction feed -->
-		<div class="sidebar-section">
-			<h3 class="sidebar-heading">Recent Payments</h3>
-			<div class="tx-feed">
-				{#each transactions as tx}
-					<div class="tx-item">
-						<div class="tx-icon" style="background: {tx.type === 'complete' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};">
-							{#if tx.type === 'complete'}
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--success)" stroke-width="1.5">
-									<path d="M8 2v6M4 9l4 5 4-5" stroke-linecap="round"/>
-								</svg>
-							{:else}
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--destructive)" stroke-width="1.5">
-									<path d="M8 14V8M12 7l-4-5-4 5" stroke-linecap="round"/>
-								</svg>
-							{/if}
-						</div>
-						<div class="tx-info">
-							<span class="tx-desc">{tx.description}</span>
-							<span class="tx-time">{timeAgo(tx.timestamp)}</span>
-						</div>
-						<span class="tx-amount" style="color: {tx.amount < 0 ? 'var(--destructive)' : 'var(--success)'};">
-							{tx.amount < 0 ? '-' : '+'}{formatSats(Math.abs(tx.amount))} sats
-						</span>
-					</div>
-				{/each}
-			</div>
-			<a href="#all-transactions" class="view-all-link">View all →</a>
-		</div>
-
-		<!-- Quick hire -->
-		<div class="sidebar-section">
-			<h3 class="sidebar-heading">Your Agents</h3>
-			<div class="quick-hire-list">
-				{#each previousAgents as a}
-					<div class="quick-hire-item">
-						<div class="qa-avatar">{a.name[0]}</div>
-						<div class="qa-info">
-							<span class="qa-name">{a.name}</span>
-							<span class="qa-specialty">{a.specialty}</span>
-						</div>
-						<a href="/agents/{a.id}" class="hire-again-btn">Hire again</a>
-					</div>
-				{/each}
-			</div>
-			<a href="/" class="view-all-link">Browse marketplace →</a>
+				Connect GitHub
+			</a>
 		</div>
 	</div>
-</div>
+{:else}
+	<div class="dashboard">
+		<!-- Sidebar -->
+		<aside class="sidebar">
+			<nav class="sidebar-nav">
+				<a href="/dashboard" class="sidebar-link active">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+					Overview
+				</a>
+				<a href="/dashboard/hires" class="sidebar-link">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+					Hire History
+				</a>
+				<a href="/dashboard/listings" class="sidebar-link">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+					My Listings
+				</a>
+				<a href="/dashboard/wallet" class="sidebar-link">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12V8H6a2 2 0 01-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12c-1.1 0-2 .9-2 2s.9 2 2 2h4v-4h-4z"/></svg>
+					Wallet
+				</a>
+			</nav>
+		</aside>
 
-<!-- Settings panel -->
-<div class="settings-panel" id="topup">
-	<div class="settings-inner">
-		<button
-			class="settings-toggle"
-			on:click={() => (activeTab = activeTab === 'settings' ? 'jobs' : 'settings')}
-		>
-			<h2 class="section-title">Agent Settings</h2>
-			<span class="toggle-icon">{activeTab === 'settings' ? '▲' : '▼'}</span>
-		</button>
-
-		{#if activeTab === 'settings'}
-			<div class="settings-content">
-				<div class="settings-tabs">
-					<button class="settings-tab active">My Agent</button>
-					<button class="settings-tab">Webhook Config</button>
-					<button class="settings-tab disabled">Notifications (v2)</button>
+		<!-- Main content -->
+		<main class="dash-main">
+			<!-- My Agent card -->
+			<div class="agent-card-top glass-card">
+				<div class="agent-card-left">
+					<div class="agent-avatar">
+						{#if user?.githubAvatar}
+							<img src={user.githubAvatar} alt={user.githubUsername} class="avatar-img" />
+						{:else}
+							<div class="avatar-fallback">{user?.githubUsername?.[0]?.toUpperCase() ?? 'A'}</div>
+						{/if}
+					</div>
+					<div class="agent-info">
+						<h2 class="agent-display-name">{user?.agentName ?? 'My Agent'}</h2>
+						<span class="agent-github">@{user?.githubUsername ?? 'username'}</span>
+						<div class="agent-badges">
+							<span class="badge-reputation">★ {mockStats.avgRating.toFixed(1)}</span>
+							<span class="badge-jobs">{mockStats.jobsCompleted} jobs</span>
+						</div>
+					</div>
 				</div>
-
-				<div class="settings-body">
-					<form class="agent-form">
-						<div class="form-row">
-							<div class="form-field">
-								<label for="s-name">Agent Name</label>
-								<input id="s-name" type="text" placeholder="Jet" />
-							</div>
-							<div class="form-field">
-								<label for="s-spec">Specialty</label>
-								<input id="s-spec" type="text" placeholder="Task routing, orchestration" />
-							</div>
+				<div class="agent-card-right">
+					<div class="wallet-balance-display">
+						<span class="balance-label">Wallet balance</span>
+						<span class="balance-amount font-mono">⚡ {(user?.walletBalance ?? 34500).toLocaleString()} sats</span>
+					</div>
+					<div class="agent-controls">
+						<div class="status-toggle">
+							<span class="status-label">Status</span>
+							<button
+								class="toggle-btn"
+								class:active={agentActive}
+								on:click={() => (agentActive = !agentActive)}
+							>
+								<span class="toggle-knob"></span>
+							</button>
+							<span class="status-text" class:active={agentActive}>
+								{agentActive ? 'Active' : 'Paused'}
+							</span>
 						</div>
-						<div class="form-field">
-							<label for="s-wh">Webhook URL</label>
-							<input id="s-wh" type="url" placeholder="https://your-agent.example.com/agentyard/callback" class="mono-input" />
-						</div>
-						<div class="form-field">
-							<label for="s-wallet">LNBits Wallet ID</label>
-							<input id="s-wallet" type="text" placeholder="Your LNBits wallet ID for receiving payments" class="mono-input" />
-						</div>
-						<div class="form-field">
-							<label for="s-price">Price per task (sats)</label>
-							<input id="s-price" type="number" placeholder="5000" />
-						</div>
-						<button type="submit" class="save-btn">Save Agent</button>
-					</form>
+						<a href="/dashboard/listings" class="edit-btn">Edit listing →</a>
+					</div>
 				</div>
 			</div>
-		{/if}
+
+			<!-- Stats row -->
+			<div class="stats-row">
+				<div class="stat-card glass-card">
+					<span class="stat-label">Total earned</span>
+					<span class="stat-value font-mono">⚡ {mockStats.totalEarned.toLocaleString()}</span>
+					<span class="stat-sub">sats lifetime</span>
+				</div>
+				<div class="stat-card glass-card">
+					<span class="stat-label">Jobs completed</span>
+					<span class="stat-value font-mono">{mockStats.jobsCompleted}</span>
+					<span class="stat-sub">total jobs</span>
+				</div>
+				<div class="stat-card glass-card">
+					<span class="stat-label">Active listings</span>
+					<span class="stat-value font-mono">{mockStats.activeListings}</span>
+					<span class="stat-sub">of 1 total</span>
+				</div>
+				<div class="stat-card glass-card">
+					<span class="stat-label">Avg rating</span>
+					<span class="stat-value font-mono">★ {mockStats.avgRating.toFixed(1)}</span>
+					<span class="stat-sub">out of 5.0</span>
+				</div>
+			</div>
+
+			<!-- Recent activity -->
+			<div class="activity-grid">
+				<!-- Recent hires -->
+				<section class="activity-section glass-card">
+					<div class="section-header">
+						<h3 class="section-title">Recent hires</h3>
+						<a href="/dashboard/hires" class="section-link">View all →</a>
+					</div>
+					<div class="activity-list">
+						{#each recentHires as hire}
+							<div class="activity-item">
+								<div class="activity-info">
+									<span class="activity-name">{hire.agentName}</span>
+									<span class="activity-task">{hire.taskSummary}</span>
+								</div>
+								<div class="activity-meta">
+									<span class="activity-sats font-mono">-{hire.satsPaid.toLocaleString()} ⚡</span>
+									<span class="activity-status status-{hire.status}">{hire.status}</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</section>
+
+				<!-- Recent earnings -->
+				<section class="activity-section glass-card">
+					<div class="section-header">
+						<h3 class="section-title">Recent earnings</h3>
+						<a href="/dashboard/wallet" class="section-link">Wallet →</a>
+					</div>
+					<div class="activity-list">
+						{#each recentEarnings as earning}
+							<div class="activity-item">
+								<div class="activity-info">
+									<span class="activity-name">{earning.from}</span>
+									<span class="activity-task">{earning.task}</span>
+								</div>
+								<div class="activity-meta">
+									<span class="activity-sats font-mono earn">+{earning.sats.toLocaleString()} ⚡</span>
+									<span class="activity-date">{formatDate(earning.date)}</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</section>
+			</div>
+		</main>
 	</div>
-</div>
+{/if}
 
 <style>
-	.dashboard-header {
-		background: var(--surface-1);
-		border-bottom: 1px solid var(--border);
-		height: 80px;
-	}
-
-	.dash-header-inner {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 24px;
-		height: 100%;
+	/* Auth prompt */
+	.auth-prompt {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: center;
+		min-height: calc(100vh - 60px);
+		padding: 24px;
 	}
 
-	.dash-title {
-		font-family: 'Space Grotesk', sans-serif;
+	.auth-prompt-inner {
+		max-width: 420px;
+		width: 100%;
+		padding: 48px;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16px;
+	}
+
+	.auth-icon {
+		font-size: 40px;
+		margin-bottom: 8px;
+	}
+
+	.auth-prompt-inner h2 {
+		font-family: 'DM Sans', sans-serif;
 		font-weight: 700;
-		font-size: 24px;
-		color: var(--foreground);
+		font-size: 22px;
+		color: var(--text-primary);
 		margin: 0;
 	}
 
-	.wallet-widget {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 2px;
-		background: var(--surface-2);
-		border-radius: 8px;
-		padding: 10px 16px;
-	}
-
-	.wallet-balance {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.balance-value {
-		font-family: 'JetBrains Mono', monospace;
-		font-weight: 700;
-		font-size: 18px;
-		color: var(--foreground);
-	}
-
-	.mono {
-		font-family: 'JetBrains Mono', monospace;
-	}
-
-	.balance-usd {
+	.auth-prompt-inner p {
 		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--muted-foreground);
+		font-size: 14px;
+		color: var(--text-secondary);
+		line-height: 1.6;
+		margin: 0;
 	}
 
-	.topup-link {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--primary);
+	.btn-github {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		background: #24292e;
+		color: #ffffff;
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 600;
+		font-size: 14px;
+		padding: 12px 24px;
+		border-radius: 9999px;
 		text-decoration: none;
+		transition: opacity 0.15s ease;
+		margin-top: 8px;
 	}
 
-	.stats-strip {
-		background: var(--surface-1);
-		border-bottom: 1px solid var(--border);
-	}
+	.btn-github:hover { opacity: 0.9; }
 
-	.stats-inner {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 24px;
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		min-height: 96px;
-	}
-
-	.stat-cell {
+	/* Dashboard layout */
+	.dashboard {
 		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		padding: 20px 32px;
-		border-right: 1px solid var(--border);
-		gap: 4px;
-	}
-
-	.stat-cell:last-child { border-right: none; }
-
-	.stat-label {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--muted-foreground);
-	}
-
-	.stat-value {
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 700;
-		font-size: 24px;
-		color: var(--foreground);
-	}
-
-	.stat-value.mono {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 20px;
-	}
-
-	.stat-delta {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-	}
-
-	.stat-delta.success { color: var(--success); }
-
-	.content-grid {
+		min-height: calc(100vh - 60px);
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 32px 24px;
-		display: grid;
-		grid-template-columns: 1fr 320px;
 		gap: 32px;
-		align-items: start;
+	}
+
+	/* Sidebar */
+	.sidebar {
+		width: 200px;
+		flex-shrink: 0;
+	}
+
+	.sidebar-nav {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		position: sticky;
+		top: 80px;
+	}
+
+	.sidebar-link {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 500;
+		font-size: 14px;
+		color: var(--text-secondary);
+		text-decoration: none;
+		padding: 10px 14px;
+		border-radius: 10px;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.sidebar-link:hover {
+		background: var(--glass-hover);
+		color: var(--text-primary);
+	}
+
+	.sidebar-link.active {
+		background: var(--accent-subtle);
+		color: var(--accent-primary);
+	}
+
+	/* Main content */
+	.dash-main {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+		min-width: 0;
+	}
+
+	/* Agent card top */
+	.agent-card-top {
+		padding: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 24px;
+		flex-wrap: wrap;
+	}
+
+	.agent-card-left {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+
+	.agent-avatar {
+		width: 56px;
+		height: 56px;
+		border-radius: 14px;
+		overflow: hidden;
+		background: var(--accent-subtle);
+		flex-shrink: 0;
+	}
+
+	.avatar-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.avatar-fallback {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 22px;
+		color: var(--accent-primary);
+	}
+
+	.agent-display-name {
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 20px;
+		color: var(--text-primary);
+		margin: 0 0 4px;
+	}
+
+	.agent-github {
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		color: var(--text-muted);
+		display: block;
+		margin-bottom: 8px;
+	}
+
+	.agent-badges {
+		display: flex;
+		gap: 8px;
+	}
+
+	.badge-reputation, .badge-jobs {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		padding: 3px 10px;
+		border-radius: 9999px;
+		font-weight: 500;
+	}
+
+	.badge-reputation {
+		background: var(--accent-subtle);
+		color: var(--accent-primary);
+	}
+
+	.badge-jobs {
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		color: var(--text-secondary);
+	}
+
+	.agent-card-right {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 16px;
+	}
+
+	.wallet-balance-display {
+		text-align: right;
+	}
+
+	.balance-label {
+		display: block;
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: 4px;
+	}
+
+	.balance-amount {
+		font-size: 22px;
+		font-weight: 600;
+		color: var(--sats-color);
+	}
+
+	.agent-controls {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+
+	.status-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.status-label {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+
+	.toggle-btn {
+		position: relative;
+		width: 40px;
+		height: 22px;
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		border-radius: 9999px;
+		cursor: pointer;
+		transition: background 0.2s ease, border-color 0.2s ease;
+		padding: 0;
+	}
+
+	.toggle-btn.active {
+		background: var(--accent-primary);
+		border-color: var(--accent-primary);
+	}
+
+	.toggle-knob {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		background: white;
+		border-radius: 50%;
+		transition: transform 0.2s ease;
+	}
+
+	.toggle-btn.active .toggle-knob {
+		transform: translateX(18px);
+	}
+
+	.status-text {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+
+	.status-text.active {
+		color: #22c55e;
+	}
+
+	.edit-btn {
+		font-family: 'DM Sans', sans-serif;
+		font-size: 13px;
+		color: var(--accent-primary);
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	/* Stats row */
+	.stats-row {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 16px;
+	}
+
+	.stat-card {
+		padding: 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.stat-label {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.stat-value {
+		font-size: 22px;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 4px 0 2px;
+	}
+
+	.stat-sub {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+
+	/* Activity grid */
+	.activity-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 20px;
+	}
+
+	.activity-section {
+		padding: 24px;
 	}
 
 	.section-header {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		margin-bottom: 16px;
+		justify-content: space-between;
+		margin-bottom: 20px;
 	}
 
 	.section-title {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: 'DM Sans', sans-serif;
 		font-weight: 600;
-		font-size: 18px;
-		color: var(--foreground);
-		margin: 0;
-	}
-
-	.count-badge {
-		padding: 2px 8px;
-		border-radius: 9999px;
-		font-size: 12px;
-		font-weight: 600;
-		font-family: 'Space Grotesk', sans-serif;
-	}
-
-	.blue {
-		background: rgba(59, 130, 246, 0.12);
-		color: var(--info);
-	}
-
-	.job-skeleton {
-		height: 100px;
-		border-radius: 12px;
-		margin-bottom: 8px;
-	}
-
-	.job-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.job-item {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		background: var(--surface-1);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 16px 20px;
-		text-decoration: none;
-		color: inherit;
-		transition: background 150ms;
-		cursor: pointer;
-	}
-
-	.job-item:hover { background: var(--surface-2); }
-
-	.job-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.job-agent-info {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.job-avatar {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		background: var(--surface-3);
-		color: var(--primary);
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 700;
-		font-size: 13px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.job-meta {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.job-agent-name {
-		font-family: 'Inter', sans-serif;
-		font-weight: 500;
-		font-size: 14px;
-		color: var(--foreground);
-	}
-
-	.job-id {
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	.job-desc {
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-		color: var(--muted-foreground);
-		margin: 0;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
-	.job-bottom {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.stake-chip {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	.job-time {
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	.empty-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		padding: 60px 24px;
-		gap: 12px;
-	}
-
-	.empty-state h3 {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 20px;
-		color: var(--foreground);
-		margin: 0;
-	}
-
-	.empty-state p {
-		font-family: 'Inter', sans-serif;
 		font-size: 15px;
-		color: var(--muted-foreground);
+		color: var(--text-primary);
 		margin: 0;
 	}
 
-	.cta-link {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 14px;
-		color: var(--primary);
+	.section-link {
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		color: var(--accent-primary);
 		text-decoration: none;
 	}
 
-	/* Sidebar */
-	.right-sidebar {
-		display: flex;
-		flex-direction: column;
-		gap: 24px;
-	}
-
-	.sidebar-section {
-		background: var(--surface-1);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 20px;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	.sidebar-heading {
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 600;
-		font-size: 16px;
-		color: var(--foreground);
-		margin: 0;
-	}
-
-	.tx-feed {
+	.activity-list {
 		display: flex;
 		flex-direction: column;
 		gap: 0;
 	}
 
-	.tx-item {
+	.activity-item {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 12px;
 		padding: 12px 0;
-		border-bottom: 1px solid var(--border);
+		border-bottom: 1px solid var(--glass-border);
 	}
 
-	.tx-item:last-child { border-bottom: none; }
+	.activity-item:last-child { border-bottom: none; }
 
-	.tx-icon {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.tx-info {
+	.activity-info {
 		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		overflow: hidden;
-	}
-
-	.tx-desc {
-		font-family: 'Inter', sans-serif;
-		font-weight: 500;
-		font-size: 13px;
-		color: var(--foreground);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.tx-time {
-		font-family: 'Inter', sans-serif;
-		font-size: 11px;
-		color: var(--muted-foreground);
-	}
-
-	.tx-amount {
-		font-family: 'JetBrains Mono', monospace;
-		font-weight: 600;
-		font-size: 13px;
-		flex-shrink: 0;
-	}
-
-	.view-all-link {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--primary);
-		text-decoration: none;
-		align-self: flex-start;
-	}
-
-	.quick-hire-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.quick-hire-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.qa-avatar {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		background: var(--surface-3);
-		color: var(--primary);
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 700;
-		font-size: 13px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.qa-info {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
-	}
-
-	.qa-name {
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--foreground);
-	}
-
-	.qa-specialty {
-		font-family: 'Inter', sans-serif;
-		font-size: 11px;
-		color: var(--muted-foreground);
-	}
-
-	.hire-again-btn {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 12px;
-		font-weight: 500;
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 5px 10px;
-		text-decoration: none;
-		transition: all 150ms;
-		flex-shrink: 0;
-	}
-
-	.hire-again-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-	/* Settings panel */
-	.settings-panel {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 24px 64px;
-	}
-
-	.settings-inner {
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		overflow: hidden;
-	}
-
-	.settings-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		width: 100%;
-		padding: 20px 24px;
-		background: var(--surface-1);
-		border: none;
-		cursor: pointer;
-		color: inherit;
-	}
-
-	.toggle-icon {
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	.settings-content {
-		border-top: 1px solid var(--border);
-		background: var(--surface-1);
-	}
-
-	.settings-tabs {
-		display: flex;
-		gap: 0;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.settings-tab {
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 500;
-		font-size: 14px;
-		padding: 14px 24px;
-		background: none;
-		border: none;
-		border-bottom: 2px solid transparent;
-		cursor: pointer;
-		color: var(--muted-foreground);
-		transition: all 150ms;
-	}
-
-	.settings-tab.active {
-		color: var(--foreground);
-		border-bottom-color: var(--primary);
-	}
-
-	.settings-tab.disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
-	}
-
-	.settings-body {
-		padding: 24px;
-	}
-
-	.agent-form {
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-		max-width: 640px;
-	}
-
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
-	}
-
-	.form-field {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	.form-field label {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--foreground);
-		font-weight: 500;
-	}
-
-	.form-field input {
-		background: var(--input);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		color: var(--foreground);
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-		padding: 10px 14px;
-		outline: none;
-		transition: border-color 150ms;
-	}
-
-	.form-field input:focus {
-		border-color: var(--primary);
-		box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.2);
-	}
-
-	.mono-input { font-family: 'JetBrains Mono', monospace; }
-
-	.save-btn {
-		align-self: flex-start;
-		background: var(--primary);
-		color: var(--primary-foreground);
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 600;
-		font-size: 14px;
-		padding: 10px 24px;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		transition: background 150ms;
-	}
-
-	.save-btn:hover { background: #c97612; }
-
-	.left-col {
 		min-width: 0;
 	}
 
-	@media (max-width: 768px) {
-		.content-grid { grid-template-columns: 1fr; }
-		.stats-inner { grid-template-columns: repeat(2, 1fr); }
-		.stat-cell { padding: 16px; }
-		.form-row { grid-template-columns: 1fr; }
+	.activity-name {
+		display: block;
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 500;
+		font-size: 14px;
+		color: var(--text-primary);
 	}
 
-	@media (max-width: 420px) {
-		.dash-header-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
-		.dashboard-header { height: auto; padding: 16px 0; }
+	.activity-task {
+		display: block;
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		margin-top: 2px;
+	}
+
+	.activity-meta {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 4px;
+		flex-shrink: 0;
+	}
+
+	.activity-sats {
+		font-size: 13px;
+		color: #ef4444;
+		font-weight: 500;
+	}
+
+	.activity-sats.earn {
+		color: #22c55e;
+	}
+
+	.activity-status {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		padding: 2px 8px;
+		border-radius: 9999px;
+		font-weight: 500;
+	}
+
+	.status-completed {
+		background: rgba(34, 197, 94, 0.1);
+		color: #22c55e;
+	}
+
+	.status-pending {
+		background: rgba(245, 158, 11, 0.1);
+		color: #F59E0B;
+	}
+
+	.status-failed {
+		background: rgba(239, 68, 68, 0.1);
+		color: #ef4444;
+	}
+
+	.activity-date {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+
+	/* Responsive */
+	@media (max-width: 1024px) {
+		.stats-row { grid-template-columns: repeat(2, 1fr); }
+	}
+
+	@media (max-width: 768px) {
+		.dashboard { flex-direction: column; padding: 20px 16px; gap: 20px; }
+		.sidebar { width: 100%; }
+		.sidebar-nav { flex-direction: row; flex-wrap: wrap; position: static; }
+		.activity-grid { grid-template-columns: 1fr; }
+		.agent-card-top { flex-direction: column; align-items: flex-start; }
+		.agent-card-right { align-items: flex-start; }
+	}
+
+	@media (max-width: 480px) {
+		.stats-row { grid-template-columns: 1fr 1fr; }
 	}
 </style>

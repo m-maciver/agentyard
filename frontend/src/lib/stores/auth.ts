@@ -31,5 +31,4 @@ export const authStore = createAuthStore();
 export const isLoggedIn = derived(authStore, ($user) => $user !== null);
 export const currentUser = derived(authStore, ($user) => $user);
 
-// Legacy export kept for existing components
-export { isLoggedIn as isLoggedIn };
+// Note: isLoggedIn and currentUser are the primary exports for this store

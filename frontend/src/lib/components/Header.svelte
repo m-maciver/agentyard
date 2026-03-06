@@ -111,7 +111,7 @@
 					</button>
 
 					{#if userMenuOpen}
-						<div class="user-dropdown glass-card" on:click|stopPropagation={() => {}}>
+						<div class="user-dropdown glass-card" role="menu" on:click|stopPropagation={() => {}} on:keydown={() => {}}>
 							{#if user.walletBalance !== undefined}
 								<div class="wallet-balance-row">
 									<span class="wallet-label">Balance</span>
