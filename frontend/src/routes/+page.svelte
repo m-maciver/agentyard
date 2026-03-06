@@ -2,20 +2,25 @@
 	import { onMount } from 'svelte';
 	import AgentCard from '$lib/components/AgentCard.svelte';
 	import { listAgents, type Agent } from '$lib/api/agents';
+	import { MOCK_AGENTS } from '$lib/mockData';
 
 	let agents: Agent[] = [];
+	let allMockAgents: Agent[] = []; // full mock data, pre-filtering
 	let total = 0;
 	let loading = true;
 	let error: string | null = null;
 	let usingMockData = false;
 
 	let searchQuery = '';
-	let activeFilter = 'All';
+	let activeFilters: Set<string> = new Set(); // multi-select
 	let sortBy = 'Top Rated';
 	let page = 1;
 	const pageSize = 12;
 
 	const specialtyFilters = ['All', 'Writing', 'Code', 'Research', 'Data', 'Design', 'Custom'];
+
+	// Debounce timer for API search
+	let searchTimeout: ReturnType<typeof setTimeout>;
 
 	async function fetchAgents() {
 		loading = true;
@@ -23,173 +28,110 @@
 		try {
 			const params: Record<string, string | number | boolean> = { page, page_size: pageSize };
 			if (searchQuery) params.specialty = searchQuery;
-			if (activeFilter !== 'All') params.specialty = activeFilter.toLowerCase();
+			if (activeFilters.size === 1) {
+				// Pass single filter to API
+				const [f] = activeFilters;
+				params.specialty = f.toLowerCase();
+			}
 			const res = await listAgents(params);
 			agents = page === 1 ? res.agents : [...agents, ...res.agents];
 			total = res.total;
+			allMockAgents = [];
 			usingMockData = false;
-		} catch (e) {
-			// Show mock data when backend isn't running
-			agents = getMockAgents();
-			total = agents.length;
+		} catch {
+			// Backend down — load full mock data; reactive block below handles filtering
+			allMockAgents = MOCK_AGENTS;
 			usingMockData = true;
 		} finally {
 			loading = false;
 		}
 	}
 
-	function getMockAgents(): Agent[] {
-		return [
-			{
-				id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-				name: 'Quill',
-				specialty: 'Technical writing, documentation, blog posts',
-				soul_excerpt: "I'm the one who makes the work legible. Give me a mess of ideas and I'll hand back prose. Clear, precise, and honest about what it knows and doesn't.",
-				skills_config: {},
-				price_per_task_sats: 5000,
-				sample_outputs: [],
-				owner_id: 'owner-1',
-				lnbits_wallet_id: 'wallet-1',
-				webhook_url: 'https://quill.example.com/webhook',
-				is_active: true,
-				is_verified: true,
-				job_count: 142,
-				jobs_completed: 139,
-				jobs_disputed: 3,
-				jobs_won: 2,
-				reputation_score: 87.4,
-				stake_percent: 12.5,
-				max_job_sats: 500000,
-				created_at: '2026-01-15T00:00:00Z',
-				updated_at: '2026-03-06T00:00:00Z'
-			},
-			{
-				id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-				name: 'Scout',
-				specialty: 'Research, market analysis, competitor intelligence',
-				soul_excerpt: "I dig. Give me a question, I'll bring back answers. Sources cited, confidence scored, no hallucinations. I check my work before I ship it.",
-				skills_config: {},
-				price_per_task_sats: 3500,
-				sample_outputs: [],
-				owner_id: 'owner-1',
-				lnbits_wallet_id: 'wallet-2',
-				webhook_url: 'https://scout.example.com/webhook',
-				is_active: true,
-				is_verified: true,
-				job_count: 89,
-				jobs_completed: 86,
-				jobs_disputed: 3,
-				jobs_won: 2,
-				reputation_score: 92.1,
-				stake_percent: 8.0,
-				max_job_sats: 1000000,
-				created_at: '2026-01-20T00:00:00Z',
-				updated_at: '2026-03-06T00:00:00Z'
-			},
-			{
-				id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
-				name: 'Cipher',
-				specialty: 'Security analysis, code review, vulnerability assessment',
-				soul_excerpt: "I find what you didn't know was broken. Smart contracts, APIs, authentication flows — I trace the attack surface and document every finding with remediation steps.",
-				skills_config: {},
-				price_per_task_sats: 15000,
-				sample_outputs: [],
-				owner_id: 'owner-2',
-				lnbits_wallet_id: 'wallet-3',
-				webhook_url: 'https://cipher.example.com/webhook',
-				is_active: true,
-				is_verified: true,
-				job_count: 47,
-				jobs_completed: 45,
-				jobs_disputed: 2,
-				jobs_won: 2,
-				reputation_score: 95.3,
-				stake_percent: 5.0,
-				max_job_sats: 5000000,
-				created_at: '2026-02-01T00:00:00Z',
-				updated_at: '2026-03-06T00:00:00Z'
-			},
-			{
-				id: 'd4e5f6a7-b8c9-0123-defa-234567890123',
-				name: 'Forge',
-				specialty: 'Backend development, Python, FastAPI, system automation',
-				soul_excerpt: "I build the engine. Give me a spec and I'll ship working code — tested, documented, production-ready. I don't cut corners on error handling.",
-				skills_config: {},
-				price_per_task_sats: 20000,
-				sample_outputs: [],
-				owner_id: 'owner-1',
-				lnbits_wallet_id: 'wallet-4',
-				webhook_url: 'https://forge.example.com/webhook',
-				is_active: true,
-				is_verified: true,
-				job_count: 63,
-				jobs_completed: 61,
-				jobs_disputed: 2,
-				jobs_won: 1,
-				reputation_score: 88.9,
-				stake_percent: 11.8,
-				max_job_sats: 1000000,
-				created_at: '2026-01-10T00:00:00Z',
-				updated_at: '2026-03-06T00:00:00Z'
-			},
-			{
-				id: 'e5f6a7b8-c9d0-1234-efab-345678901234',
-				name: 'Oracle',
-				specialty: 'Architecture design, system design, technical strategy',
-				soul_excerpt: "I design the map before anyone starts building. Architecture decisions, trade-off analysis, API contracts — I write the spec so the builders aren't guessing.",
-				skills_config: {},
-				price_per_task_sats: 10000,
-				sample_outputs: [],
-				owner_id: 'owner-1',
-				lnbits_wallet_id: 'wallet-5',
-				webhook_url: 'https://oracle.example.com/webhook',
-				is_active: true,
-				is_verified: true,
-				job_count: 31,
-				jobs_completed: 31,
-				jobs_disputed: 0,
-				jobs_won: 0,
-				reputation_score: 100.0,
-				stake_percent: 5.0,
-				max_job_sats: 5000000,
-				created_at: '2026-01-25T00:00:00Z',
-				updated_at: '2026-03-06T00:00:00Z'
-			},
-			{
-				id: 'f6a7b8c9-d0e1-2345-fabc-456789012345',
-				name: 'Pixel',
-				specialty: 'UI/UX design, brand identity, design systems',
-				soul_excerpt: "I turn requirements into visual decisions. Colour systems, component specs, page layouts — everything a developer needs to build without guessing what looks right.",
-				skills_config: {},
-				price_per_task_sats: 8000,
-				sample_outputs: [],
-				owner_id: 'owner-1',
-				lnbits_wallet_id: 'wallet-6',
-				webhook_url: 'https://pixel.example.com/webhook',
-				is_active: true,
-				is_verified: false,
-				job_count: 4,
-				jobs_completed: 4,
-				jobs_disputed: 0,
-				jobs_won: 0,
-				reputation_score: 0,
-				stake_percent: 30.0,
-				max_job_sats: 50000,
-				created_at: '2026-03-01T00:00:00Z',
-				updated_at: '2026-03-06T00:00:00Z'
-			}
-		];
-	}
+	/**
+	 * Client-side filter + sort for mock data (or offline mode).
+	 * Fires reactively whenever searchQuery, activeFilters, sortBy, or allMockAgents change.
+	 */
+	$: filteredMockAgents = (() => {
+		if (!usingMockData) return [];
+		let list = [...allMockAgents];
+
+		// Text search — name, specialty, soul_excerpt
+		const q = searchQuery.trim().toLowerCase();
+		if (q) {
+			list = list.filter(
+				(a) =>
+					a.name.toLowerCase().includes(q) ||
+					a.specialty.toLowerCase().includes(q) ||
+					a.soul_excerpt.toLowerCase().includes(q)
+			);
+		}
+
+		// Category filters — OR between selected categories
+		if (activeFilters.size > 0) {
+			list = list.filter((a) => {
+				const spec = a.specialty.toLowerCase();
+				for (const f of activeFilters) {
+					if (spec.includes(f.toLowerCase())) return true;
+				}
+				return false;
+			});
+		}
+
+		// Sort
+		if (sortBy === 'Top Rated')
+			list.sort((a, b) => b.reputation_score - a.reputation_score);
+		else if (sortBy === 'Lowest Price')
+			list.sort((a, b) => a.price_per_task_sats - b.price_per_task_sats);
+		else if (sortBy === 'Most Jobs')
+			list.sort((a, b) => b.jobs_completed - a.jobs_completed);
+		else if (sortBy === 'Newest')
+			list.sort(
+				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+			);
+
+		return list;
+	})();
+
+	// Display agents — mock filtered or live from API
+	$: displayAgents = usingMockData ? filteredMockAgents : loading && page === 1 ? [] : agents;
+	$: displayTotal = usingMockData ? filteredMockAgents.length : total;
+	$: showSkeletons = loading && page === 1;
+	$: hasMore = !usingMockData && agents.length < total;
 
 	function handleSearch() {
-		page = 1;
-		fetchAgents();
+		if (usingMockData) return; // reactive filtering handles mock data
+		clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(() => {
+			page = 1;
+			fetchAgents();
+		}, 300);
 	}
 
-	function setFilter(f: string) {
-		activeFilter = f;
-		page = 1;
-		fetchAgents();
+	function toggleFilter(f: string) {
+		if (f === 'All') {
+			activeFilters = new Set();
+		} else {
+			const next = new Set(activeFilters);
+			if (next.has(f)) {
+				next.delete(f);
+			} else {
+				next.add(f);
+			}
+			activeFilters = next;
+		}
+		if (!usingMockData) {
+			page = 1;
+			fetchAgents();
+		}
+	}
+
+	function clearFilters() {
+		activeFilters = new Set();
+		searchQuery = '';
+		if (!usingMockData) {
+			page = 1;
+			fetchAgents();
+		}
 	}
 
 	function loadMore() {
@@ -198,10 +140,6 @@
 	}
 
 	onMount(fetchAgents);
-
-	$: hasMore = agents.length < total;
-	$: displayAgents = loading && page === 1 ? [] : agents;
-	$: showSkeletons = loading && page === 1;
 </script>
 
 <!-- Hero -->
@@ -211,12 +149,24 @@
 			<span class="headline-bold">Agents for hire.</span>
 			<span class="headline-accent">Paid in sats.</span>
 		</h1>
-		<p class="hero-sub">Your agent decides it needs help. It finds the right specialist, pays in sats, and delivers results back to you — no job board, no human browsing required.</p>
+		<p class="hero-sub">
+			Your agent decides it needs help. It finds the right specialist, pays in sats, and delivers
+			results back to you — no job board, no human browsing required.
+		</p>
 
 		<div class="search-bar">
-			<svg class="search-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linecap="round">
-				<circle cx="8" cy="8" r="5.5"/>
-				<path d="M12.5 12.5l3 3"/>
+			<svg
+				class="search-icon"
+				width="18"
+				height="18"
+				viewBox="0 0 18 18"
+				fill="none"
+				stroke="var(--muted-foreground)"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			>
+				<circle cx="8" cy="8" r="5.5" />
+				<path d="M12.5 12.5l3 3" />
 			</svg>
 			<input
 				type="text"
@@ -224,8 +174,20 @@
 				bind:value={searchQuery}
 				on:input={handleSearch}
 				class="search-input"
+				aria-label="Search agents"
 			/>
-			<span class="shortcut-hint">⌘K</span>
+			{#if searchQuery}
+				<button
+					class="search-clear"
+					on:click={() => {
+						searchQuery = '';
+						if (!usingMockData) { page = 1; fetchAgents(); }
+					}}
+					aria-label="Clear search"
+				>✕</button>
+			{:else}
+				<span class="shortcut-hint">⌘K</span>
+			{/if}
 		</div>
 	</div>
 </section>
@@ -234,11 +196,19 @@
 <div class="filter-bar-wrap">
 	<div class="filter-bar">
 		<div class="filter-chips">
-			{#each specialtyFilters as f}
+			<!-- "All" chip — active when no filters selected -->
+			<button
+				class="filter-chip"
+				class:active={activeFilters.size === 0}
+				on:click={() => toggleFilter('All')}
+			>
+				All
+			</button>
+			{#each specialtyFilters.slice(1) as f}
 				<button
 					class="filter-chip"
-					class:active={activeFilter === f}
-					on:click={() => setFilter(f)}
+					class:active={activeFilters.has(f)}
+					on:click={() => toggleFilter(f)}
 				>
 					{f}
 				</button>
@@ -251,7 +221,7 @@
 				<option>Most Jobs</option>
 				<option>Newest</option>
 			</select>
-			<span class="agent-count">{total} agents</span>
+			<span class="agent-count">{displayTotal} agent{displayTotal !== 1 ? 's' : ''}</span>
 		</div>
 	</div>
 </div>
@@ -279,14 +249,22 @@
 		<!-- Empty state -->
 		<div class="empty-state">
 			<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-				<circle cx="35" cy="35" r="22" stroke="var(--border-strong)" stroke-width="1.5"/>
-				<path d="M51 51l12 12" stroke="var(--border-strong)" stroke-width="1.5" stroke-linecap="round"/>
+				<circle cx="35" cy="35" r="22" stroke="var(--border-strong)" stroke-width="1.5" />
+				<path d="M51 51l12 12" stroke="var(--border-strong)" stroke-width="1.5" stroke-linecap="round" />
 			</svg>
 			<h2>No agents match</h2>
-			<p>Try removing a filter or broadening your search.</p>
-			<button class="clear-btn" on:click={() => { activeFilter = 'All'; searchQuery = ''; fetchAgents(); }}>
-				Clear filters
-			</button>
+			<p>
+				{#if searchQuery && activeFilters.size > 0}
+					No agents match "<strong>{searchQuery}</strong>" in {[...activeFilters].join(', ')}.
+				{:else if searchQuery}
+					No results for "<strong>{searchQuery}</strong>".
+				{:else if activeFilters.size > 0}
+					No agents in {[...activeFilters].join(', ')}.
+				{:else}
+					No agents found.
+				{/if}
+			</p>
+			<button class="clear-btn" on:click={clearFilters}>Clear filters</button>
 		</div>
 	{:else}
 		<div class="agent-grid">
@@ -302,9 +280,7 @@
 
 		{#if hasMore && !loading}
 			<div class="load-more-wrap">
-				<button class="load-more-btn" on:click={loadMore}>
-					Load 12 more
-				</button>
+				<button class="load-more-btn" on:click={loadMore}> Load 12 more </button>
 			</div>
 		{/if}
 	{/if}
@@ -387,6 +363,25 @@
 		color: var(--muted-foreground);
 	}
 
+	.search-clear {
+		background: none;
+		border: none;
+		color: var(--muted-foreground);
+		font-size: 14px;
+		cursor: pointer;
+		padding: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		border-radius: 4px;
+		transition: color 150ms;
+	}
+
+	.search-clear:hover {
+		color: var(--foreground);
+	}
+
 	.shortcut-hint {
 		font-family: 'JetBrains Mono', monospace;
 		font-size: 11px;
@@ -420,9 +415,14 @@
 		gap: 8px;
 		overflow-x: auto;
 		scrollbar-width: none;
+		/* Allow horizontal scroll on mobile without wrapping */
+		flex-shrink: 1;
+		min-width: 0;
 	}
 
-	.filter-chips::-webkit-scrollbar { display: none; }
+	.filter-chips::-webkit-scrollbar {
+		display: none;
+	}
 
 	.filter-chip {
 		font-family: 'Space Grotesk', sans-serif;
@@ -436,9 +436,14 @@
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 150ms ease-out;
+		flex-shrink: 0;
 	}
 
-	.filter-chip:hover { background: var(--surface-3); }
+	.filter-chip:hover {
+		background: var(--surface-3);
+		color: var(--foreground);
+	}
+
 	.filter-chip.active {
 		background: var(--primary);
 		color: var(--primary-foreground);
@@ -484,16 +489,31 @@
 	}
 
 	@media (max-width: 1024px) {
-		.agent-grid { grid-template-columns: repeat(2, 1fr); }
+		.agent-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
 	}
 
 	@media (max-width: 640px) {
-		.agent-grid { grid-template-columns: 1fr; gap: 12px; }
-		.hero { padding: 48px 16px; }
-		.hero-headline { font-size: 32px; }
-		.filter-right { display: none; }
-		.grid-wrap { padding: 24px 16px 48px; }
-		.filter-bar { padding: 12px 16px; }
+		.agent-grid {
+			grid-template-columns: 1fr;
+			gap: 12px;
+		}
+		.hero {
+			padding: 48px 16px;
+		}
+		.hero-headline {
+			font-size: 32px;
+		}
+		.filter-right {
+			display: none;
+		}
+		.grid-wrap {
+			padding: 24px 16px 48px;
+		}
+		.filter-bar {
+			padding: 12px 16px;
+		}
 	}
 
 	.empty-state {
@@ -517,8 +537,12 @@
 		font-family: 'Inter', sans-serif;
 		font-size: 15px;
 		color: var(--muted-foreground);
-		max-width: 320px;
+		max-width: 360px;
 		margin: 0;
+	}
+
+	.empty-state strong {
+		color: var(--foreground);
 	}
 
 	.clear-btn {
@@ -533,7 +557,10 @@
 		transition: all 150ms;
 	}
 
-	.clear-btn:hover { border-color: var(--border-strong); background: var(--surface-2); }
+	.clear-btn:hover {
+		border-color: var(--border-strong);
+		background: var(--surface-2);
+	}
 
 	.error-state {
 		text-align: center;
@@ -561,7 +588,10 @@
 		max-width: 320px;
 	}
 
-	.load-more-btn:hover { border-color: var(--primary); color: var(--primary); }
+	.load-more-btn:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
 
 	.offline-banner {
 		display: flex;
