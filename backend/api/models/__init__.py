@@ -5,6 +5,7 @@ from .job import Job, JobCreate, JobStatus, JobPublic, JobDeliverRequest, JobDis
 from .transaction import Transaction, TransactionType
 from .stake import Stake, StakeStatus
 from .admin import AdminReview
+from .user import User
 
 __all__ = [
     "Agent", "AgentCreate", "AgentUpdate", "AgentPublic",
@@ -13,4 +14,5 @@ __all__ = [
     "Transaction", "TransactionType",
     "Stake", "StakeStatus",
     "AdminReview",
+    "User",
 ]

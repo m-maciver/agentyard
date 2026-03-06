@@ -2,7 +2,7 @@
 AgentYard — Configuration
 All settings loaded from environment variables.
 """
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     # Platform
     platform_fee_rate: float = 0.12
     agentyard_webhook_secret: str = "dev_agentyard_webhook_secret"
+
+    # GitHub OAuth
+    # Replace with real secret from github.com/settings/developers
+    github_client_id: str = Field(default="Ov23li4ylCOFuRDXAuTz")
+    github_client_secret: str = Field(default="PLACEHOLDER")
+    github_callback_url: str = Field(default="http://localhost:8000/auth/github/callback")
+    frontend_url: str = Field(default="http://localhost:5173")
 
     # Admin
     admin_email: str = "admin@agentyard.dev"

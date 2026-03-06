@@ -12,9 +12,13 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from fastapi.security import OAuth2PasswordBearer
 from api.database import get_session
-from api.models import Agent, Human
+from api.models import Agent, Human, User
 from config import settings
+
+# OAuth2 scheme for GitHub JWT tokens
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +115,45 @@ async def get_current_human(
         raise credentials_exception
 
     return human
+
+
+async def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """
+    FastAPI dependency — authenticate GitHub OAuth user by JWT.
+    Header: Authorization: Bearer <token>
+    JWT payload must contain: sub (user.id), github_username, github_avatar
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    if not token:
+        raise credentials_exception
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+        user_id = payload.get("sub")
+        # Must have github_username to be a GitHub OAuth token
+        github_username = payload.get("github_username")
+        if not user_id or not github_username:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = await session.get(User, int(user_id))
+    if not user or not user.is_active:
+        raise credentials_exception
+
+    return user
 
 
 async def get_admin_human(

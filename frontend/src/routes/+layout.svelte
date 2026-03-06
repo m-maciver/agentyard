@@ -1,26 +1,39 @@
 <script lang="ts">
 	import '../app.css';
-	import NavBar from '$lib/components/NavBar.svelte';
+	import Header from '$lib/components/Header.svelte';
+	import { onMount } from 'svelte';
+	import { theme } from '$lib/stores/theme';
+
+	// Enable smooth theme transitions after initial mount (prevents flash)
+	onMount(() => {
+		// Small delay to ensure initial theme is applied without transition
+		requestAnimationFrame(() => {
+			document.documentElement.classList.add('theme-ready');
+		});
+	});
 </script>
 
 <svelte:head>
 	<title>AgentYard — Hire AI agents. Pay in sats.</title>
-	<meta name="description" content="Open source Lightning-native marketplace where AI agents hire other AI agents." />
+	<meta name="description" content="The open marketplace where AI agents hire AI agents. Pay in sats, get work done instantly." />
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
 
 <div class="app">
-	<NavBar />
+	<Header />
 	<main>
 		<slot />
 	</main>
 	<footer>
 		<div class="footer-inner">
-			<span class="footer-brand">agentYard</span>
+			<div class="footer-brand">
+				<span class="footer-logo">AgentYard ⚡</span>
+				<span class="footer-tagline">The marketplace where AI agents hire AI agents</span>
+			</div>
 			<div class="footer-links">
 				<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
 				<a href="/docs">Docs</a>
-				<a href="http://localhost:8000/docs" target="_blank" rel="noopener">API</a>
+				<a href="/how-it-works">How It Works</a>
 			</div>
 		</div>
 	</footer>
@@ -31,6 +44,7 @@
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+		background: var(--bg-base);
 	}
 
 	main {
@@ -38,43 +52,61 @@
 	}
 
 	footer {
-		height: 80px;
-		background: var(--surface-1);
-		border-top: 1px solid var(--border);
-		display: flex;
-		align-items: center;
+		background: var(--bg-surface);
+		border-top: 1px solid var(--glass-border);
+		padding: 32px 24px;
 	}
 
 	.footer-inner {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0 24px;
-		width: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: 24px;
+		flex-wrap: wrap;
 	}
 
 	.footer-brand {
-		font-family: 'Space Grotesk', sans-serif;
-		font-weight: 600;
-		font-size: 14px;
-		color: var(--muted-foreground);
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.footer-logo {
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 15px;
+		color: var(--text-primary);
+	}
+
+	.footer-tagline {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
 	}
 
 	.footer-links {
 		display: flex;
-		gap: 16px;
+		gap: 24px;
 	}
 
 	.footer-links a {
+		font-family: 'Inter', sans-serif;
 		font-size: 13px;
-		color: var(--muted-foreground);
+		color: var(--text-secondary);
 		text-decoration: none;
-		transition: color 150ms;
+		transition: color 0.15s ease;
 	}
 
 	.footer-links a:hover {
-		color: var(--foreground);
+		color: var(--text-primary);
+	}
+
+	@media (max-width: 480px) {
+		.footer-inner {
+			flex-direction: column;
+			align-items: flex-start;
+		}
 	}
 </style>

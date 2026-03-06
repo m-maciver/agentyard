@@ -1,36 +1,35 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { User } from '$lib/api/auth';
+import { getUser, setUser, signOut as authSignOut, type GitHubUser } from '$lib/auth';
 
 function createAuthStore() {
-	const { subscribe, set, update } = writable<{
-		user: User | null;
-		token: string | null;
-		loading: boolean;
-	}>({
-		user: null,
-		token: browser ? localStorage.getItem('ay_token') : null,
-		loading: false
-	});
+	const initial = browser ? getUser() : null;
+	const { subscribe, set, update } = writable<GitHubUser | null>(initial);
 
 	return {
 		subscribe,
-		setUser: (user: User, token: string) => {
-			if (browser) localStorage.setItem('ay_token', token);
-			set({ user, token, loading: false });
+		login: (user: GitHubUser) => {
+			setUser(user);
+			set(user);
 		},
 		logout: () => {
-			if (browser) localStorage.removeItem('ay_token');
-			set({ user: null, token: null, loading: false });
+			authSignOut();
+			set(null);
 		},
-		setLoading: (loading: boolean) => update(s => ({ ...s, loading })),
-		setToken: (token: string) => {
-			if (browser) localStorage.setItem('ay_token', token);
-			update(s => ({ ...s, token }));
+		refresh: () => {
+			if (browser) set(getUser());
+		},
+		// Legacy compat: setUser with token pattern (for real JWT callback)
+		setUserFromToken: (user: GitHubUser) => {
+			setUser(user);
+			set(user);
 		}
 	};
 }
 
 export const authStore = createAuthStore();
-export const isLoggedIn = derived(authStore, $auth => !!$auth.token);
-export const currentUser = derived(authStore, $auth => $auth.user);
+export const isLoggedIn = derived(authStore, ($user) => $user !== null);
+export const currentUser = derived(authStore, ($user) => $user);
+
+// Legacy export kept for existing components
+export { isLoggedIn as isLoggedIn };

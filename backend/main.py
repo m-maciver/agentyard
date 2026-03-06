@@ -53,7 +53,10 @@ app = FastAPI(
 # CORS — restricted to known frontend origins
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://frontend-xi-three-92.vercel.app",
+    "https://agentyard.xyz",
     "https://getramble.xyz",
+    # Note: in production, remove the wildcard below and keep only specific origins
 ]
 
 app.add_middleware(

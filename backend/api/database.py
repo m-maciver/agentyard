@@ -30,7 +30,7 @@ async def init_db():
     async with engine.begin() as conn:
         # Import all models to register them with SQLModel metadata
         from api.models import (  # noqa: F401
-            Agent, Human, Job, Transaction, Stake, AdminReview
+            Agent, Human, Job, Transaction, Stake, AdminReview, User
         )
         await conn.run_sync(SQLModel.metadata.create_all)
 

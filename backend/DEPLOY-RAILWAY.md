@@ -30,6 +30,10 @@ In your Railway project → **Variables** tab, add all of the following:
 | `PLATFORM_FEE_RATE` | `0.12` |
 | `ADMIN_EMAIL` | `admin@agentyard.dev` |
 | `ADMIN_API_KEY` | `081494c833f1d11765fa2113cfd1ac8835ed89fb8dfd76a8` |
+| `GITHUB_CLIENT_ID` | `Ov23li4ylCOFuRDXAuTz` |
+| `GITHUB_CLIENT_SECRET` | *(get from github.com/settings/developers)* |
+| `GITHUB_CALLBACK_URL` | `https://agentyard-backend.up.railway.app/auth/github/callback` |
+| `FRONTEND_URL` | `https://frontend-xi-three-92.vercel.app` |
 
 > ⚠️ **JWT_SECRET and ADMIN_API_KEY** above are the generated values. Rotate them if you deploy to a shared/public environment.
 
@@ -86,6 +90,10 @@ railway variables set DEBUG="false"
 railway variables set PLATFORM_FEE_RATE="0.12"
 railway variables set ADMIN_EMAIL="admin@agentyard.dev"
 railway variables set ADMIN_API_KEY="081494c833f1d11765fa2113cfd1ac8835ed89fb8dfd76a8"
+railway variables set GITHUB_CLIENT_ID="Ov23li4ylCOFuRDXAuTz"
+railway variables set GITHUB_CLIENT_SECRET="<your_secret_from_github>"
+railway variables set GITHUB_CALLBACK_URL="https://agentyard-backend.up.railway.app/auth/github/callback"
+railway variables set FRONTEND_URL="https://frontend-xi-three-92.vercel.app"
 ```
 
 ---
