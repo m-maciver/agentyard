@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     lnbits_stake_wallet_adminkey: str = ""
     lnbits_webhook_secret: str = "dev_webhook_secret"
 
+    # Lightning stub — set LIGHTNING_STUB=true or LNBITS_URL=stub to bypass real LNBits
+    lightning_stub: bool = False
+
     # Auth
     jwt_secret: str = "dev_jwt_secret_change_in_production"
     jwt_expiry_hours: int = 24

@@ -136,10 +136,18 @@ async def recalculate_reputation(ctx, agent_id: str):
 
 
 # ARQ worker settings
+def _get_redis_settings():
+    """Return ARQ RedisSettings or None if Redis is disabled."""
+    if not settings.redis_url or settings.redis_url.lower() in ("disabled", "none", ""):
+        logger.warning("[STUB] Redis/ARQ disabled — background workers will not start")
+        return None
+    return arq.connections.RedisSettings.from_dsn(settings.redis_url)
+
+
 class WorkerSettings:
     functions = [auto_release_escrow, retry_webhook_delivery, recalculate_reputation]
     on_startup = startup
     on_shutdown = shutdown
-    redis_settings = arq.connections.RedisSettings.from_dsn(settings.redis_url)
+    redis_settings = _get_redis_settings()
     max_jobs = 10
     job_timeout = 300  # 5 minutes per job max

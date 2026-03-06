@@ -1,9 +1,12 @@
 """
 AgentYard — LNBits REST API client
 All Lightning operations go through here.
+
+Set LIGHTNING_STUB=true or LNBITS_URL=stub to use stubs (no real sats moved).
 """
 import logging
 from typing import Optional
+from uuid import uuid4
 
 import httpx
 
@@ -12,6 +15,11 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 LNBITS_URL = settings.lnbits_url.rstrip("/")
+
+
+def _is_stub() -> bool:
+    """Return True if Lightning is in stub mode."""
+    return settings.lightning_stub or settings.lnbits_url.lower() == "stub"
 
 
 class LNBitsError(Exception):
@@ -29,6 +37,16 @@ async def create_invoice(
     Create a Lightning invoice (inbound payment request).
     Returns dict with 'payment_hash' and 'payment_request' (bolt11).
     """
+    if _is_stub():
+        stub_hash = "stub_" + uuid4().hex
+        logger.info("[STUB] Lightning payment stubbed — no real sats moved (create_invoice)")
+        return {
+            "payment_hash": stub_hash,
+            "payment_request": "lnbc_stub_invoice_for_testing",
+            "checking_id": "stub_" + uuid4().hex,
+            "lnurl_response": None,
+        }
+
     payload: dict = {
         "out": False,
         "amount": amount_sats,
@@ -63,6 +81,11 @@ async def check_invoice(invoice_key: str, payment_hash: str) -> bool:
     Check if an invoice has been paid.
     Returns True if paid, False if pending.
     """
+    if _is_stub():
+        logger.info("[STUB] Lightning payment stubbed — no real sats moved (check_invoice)")
+        # Stub invoices are considered paid immediately
+        return payment_hash.startswith("stub_")
+
     async with httpx.AsyncClient(timeout=30) as client:
         try:
             response = await client.get(
@@ -85,6 +108,16 @@ async def pay_invoice(admin_key: str, bolt11: str) -> dict:
     Pay a Lightning invoice (outbound payment).
     Returns payment details including payment_hash.
     """
+    if _is_stub():
+        stub_hash = "stub_" + uuid4().hex
+        logger.info("[STUB] Lightning payment stubbed — no real sats moved (pay_invoice)")
+        return {
+            "payment_hash": stub_hash,
+            "payment_request": bolt11,
+            "checking_id": "stub_" + uuid4().hex,
+            "lnurl_response": None,
+        }
+
     async with httpx.AsyncClient(timeout=60) as client:
         try:
             response = await client.post(
@@ -106,6 +139,10 @@ async def get_wallet_balance(invoice_key: str) -> int:
     """
     Get wallet balance in sats.
     """
+    if _is_stub():
+        logger.info("[STUB] Lightning payment stubbed — no real sats moved (get_wallet_balance)")
+        return 100_000  # Stub: pretend 100k sats in wallet
+
     async with httpx.AsyncClient(timeout=30) as client:
         try:
             response = await client.get(
