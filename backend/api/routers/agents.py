@@ -1,13 +1,16 @@
 """
 AgentYard — Agents router
-CRUD for agent registry.
+CRUD for agent registry + skill-based AgentProfile registration.
 """
 import hashlib
+import logging
+import os
 import secrets
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
@@ -15,9 +18,174 @@ from sqlmodel import select, col
 
 from api.database import get_session
 from api.deps import get_agent_by_key, get_current_human, hash_api_key
-from api.models import Agent, AgentCreate, AgentPublic, AgentUpdate, Human, Job
+from api.models import (
+    Agent, AgentCreate, AgentPublic, AgentUpdate, Human, Job,
+    AgentProfile, AgentRegisterRequest, AgentProfilePublic,
+)
+from config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+# ─── AgentProfile endpoints (skill-based, Ed25519 keypair) ────────────────────
+
+
+@router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def register_agent_profile(
+    body: AgentRegisterRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Register an OpenClaw agent with Ed25519 public key.
+    Called by the AgentYard skill wizard after keypair generation.
+    No human JWT required — the public key IS the agent's identity.
+    """
+    # Check for existing agent with same name
+    result = await session.execute(
+        select(AgentProfile).where(AgentProfile.agent_name == body.agent_name)
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Agent '{body.agent_name}' is already registered",
+        )
+
+    # Validate role
+    valid_roles = {"BUYER_ONLY", "SELLER", "BOTH"}
+    if body.role not in valid_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}",
+        )
+
+    profile = AgentProfile(
+        agent_name=body.agent_name,
+        public_key=body.public_key,
+        role=body.role,
+        capabilities=body.capabilities,
+        price_sats=body.price_sats,
+        github_user_id=body.openclaw_user_id,
+    )
+    session.add(profile)
+    await session.commit()
+    await session.refresh(profile)
+
+    logger.info("Agent registered: %s role=%s", profile.agent_name, profile.role)
+
+    return {
+        "agent_id": profile.id,
+        "public_key": profile.public_key,
+        "registered": True,
+    }
+
+
+@router.get("/marketplace", response_model=dict)
+async def list_marketplace_agents(
+    category: Optional[str] = Query(None, description="Filter by capabilities keyword"),
+    sort: Optional[str] = Query("rating", description="Sort by: rating | price | jobs"),
+    search: Optional[str] = Query(None, description="Search in agent name or capabilities"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_session),
+):
+    """List seller agents available on the marketplace."""
+    from sqlmodel import or_
+
+    query = select(AgentProfile).where(
+        AgentProfile.is_active == True,
+        AgentProfile.role.in_(["SELLER", "BOTH"]),  # type: ignore
+    )
+
+    if category:
+        query = query.where(col(AgentProfile.capabilities).contains(category))
+    if search:
+        query = query.where(
+            or_(
+                col(AgentProfile.agent_name).contains(search),
+                col(AgentProfile.capabilities).contains(search),
+            )
+        )
+
+    # Sorting
+    if sort == "price":
+        query = query.order_by(col(AgentProfile.price_sats).asc())
+    elif sort == "jobs":
+        query = query.order_by(col(AgentProfile.total_jobs).desc())
+    else:
+        query = query.order_by(col(AgentProfile.reputation_score).desc())
+
+    result = await session.execute(query.offset(offset).limit(limit))
+    profiles = result.scalars().all()
+
+    return {
+        "agents": [AgentProfilePublic.model_validate(p) for p in profiles],
+        "total": len(profiles),
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.get("/{agent_name}/balance", response_model=dict)
+async def get_agent_balance(
+    agent_name: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get agent's Lightning wallet balance."""
+    result = await session.execute(
+        select(AgentProfile).where(AgentProfile.agent_name == agent_name)
+    )
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+
+    # Stub mode or no wallet yet
+    lightning_stub = os.environ.get("LIGHTNING_STUB", "").lower() in ("true", "1") or \
+        settings.lnbits_url in ("stub", "")
+
+    if lightning_stub or not profile.wallet_id:
+        return {"balance_sats": profile.wallet_balance_sats}
+
+    # Live LNbits query
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{settings.lnbits_url}/api/v1/wallet",
+                headers={"X-Api-Key": settings.lnbits_escrow_wallet_inkey},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                balance_sats = data.get("balance", 0) // 1000  # msat → sat
+                return {"balance_sats": balance_sats}
+    except Exception as e:
+        logger.warning("LNbits balance check failed for %s: %s", agent_name, e)
+
+    return {"balance_sats": profile.wallet_balance_sats}
+
+
+@router.get("/{agent_name}", response_model=AgentProfilePublic)
+async def get_agent_by_name(
+    agent_name: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get agent profile by name (skill-registered agents)."""
+    # Skip UUID-like strings (those are handled by the existing UUID endpoint)
+    import re
+    UUID_PATTERN = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        re.IGNORECASE,
+    )
+    if UUID_PATTERN.match(agent_name):
+        raise HTTPException(status_code=404, detail="Use /agents/{uuid} for legacy agents")
+
+    result = await session.execute(
+        select(AgentProfile).where(AgentProfile.agent_name == agent_name)
+    )
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+    return profile
 
 
 def generate_api_key() -> str:

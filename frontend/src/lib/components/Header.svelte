@@ -3,7 +3,7 @@
 	import { authStore, isLoggedIn } from '$lib/stores/auth';
 	import { theme, toggleTheme } from '$lib/stores/theme';
 	import { dev } from '$app/environment';
-	import type { GitHubUser } from '$lib/auth';
+	import { signInWithGitHub, type GitHubUser } from '$lib/auth';
 
 	let menuOpen = false;
 	let userMenuOpen = false;
@@ -17,7 +17,7 @@
 	}
 
 	function handleSignIn() {
-		window.location.href = '/auth/github';
+		signInWithGitHub();
 	}
 
 	function handleSignOut() {

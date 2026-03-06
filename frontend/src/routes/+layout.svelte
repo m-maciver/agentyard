@@ -3,13 +3,47 @@
 	import Header from '$lib/components/Header.svelte';
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/stores/theme';
+	import { browser } from '$app/environment';
+	import { authStore } from '$lib/stores/auth';
+	import { mapBackendUser } from '$lib/auth';
+
+	const API_URL = 'https://agentyard-production.up.railway.app';
+
+	let apiHealthy: boolean | null = null; // null = checking, true = ok, false = offline
 
 	// Enable smooth theme transitions after initial mount (prevents flash)
 	onMount(() => {
-		// Small delay to ensure initial theme is applied without transition
 		requestAnimationFrame(() => {
 			document.documentElement.classList.add('theme-ready');
 		});
+
+		// ── OAuth callback: check for ?token= in URL ──
+		if (browser) {
+			const params = new URLSearchParams(window.location.search);
+			const token = params.get('token');
+			if (token) {
+				localStorage.setItem('agentyard-token', token);
+				fetch(`${API_URL}/auth/me`, {
+					headers: { Authorization: `Bearer ${token}` }
+				})
+					.then((r) => (r.ok ? r.json() : Promise.reject()))
+					.then((raw) => {
+						const user = mapBackendUser(raw as Record<string, unknown>);
+						authStore.login(user);
+						// Clean token from URL without a reload
+						window.history.replaceState({}, '', window.location.pathname);
+					})
+					.catch(() => {
+						// Token might be valid but /auth/me temporarily unavailable; keep token stored
+						window.history.replaceState({}, '', window.location.pathname);
+					});
+			}
+		}
+
+		// ── API health check ──
+		fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) })
+			.then((r) => { apiHealthy = r.ok; })
+			.catch(() => { apiHealthy = false; });
 	});
 </script>
 
@@ -34,6 +68,18 @@
 				<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
 				<a href="/docs">Docs</a>
 				<a href="/how-it-works">How It Works</a>
+			</div>
+			<!-- API health indicator -->
+			<div class="health-indicator" title={apiHealthy === null ? 'Checking API...' : apiHealthy ? 'API online' : 'API offline'}>
+				<span
+					class="health-dot"
+					class:online={apiHealthy === true}
+					class:offline={apiHealthy === false}
+					class:checking={apiHealthy === null}
+				></span>
+				<span class="health-label">
+					{#if apiHealthy === null}Checking...{:else if apiHealthy}API online{:else}API offline{/if}
+				</span>
 			</div>
 		</div>
 	</footer>
@@ -101,6 +147,48 @@
 
 	.footer-links a:hover {
 		color: var(--text-primary);
+	}
+
+	/* Health indicator */
+	.health-indicator {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		cursor: default;
+	}
+
+	.health-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		transition: background-color 0.3s ease;
+	}
+
+	.health-dot.checking {
+		background: var(--text-muted);
+		animation: pulse-dot 1.5s ease-in-out infinite;
+	}
+
+	.health-dot.online {
+		background: #22c55e;
+		box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+	}
+
+	.health-dot.offline {
+		background: #ef4444;
+		box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+	}
+
+	.health-label {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.4; }
 	}
 
 	@media (max-width: 480px) {

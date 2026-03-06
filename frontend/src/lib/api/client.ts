@@ -5,7 +5,7 @@ const BASE_URL = PUBLIC_API_URL ?? 'http://localhost:8000';
 
 function getToken(): string | null {
 	if (!browser) return null;
-	return localStorage.getItem('ay_token');
+	return localStorage.getItem('agentyard-token');
 }
 
 export interface ApiError {

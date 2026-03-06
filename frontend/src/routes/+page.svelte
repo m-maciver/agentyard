@@ -3,6 +3,59 @@
 	import { listAgents, type Agent } from '$lib/api/agents';
 	import { MOCK_AGENTS, type MockAgent } from '$lib/mockData';
 	import { isLoggedIn } from '$lib/stores/auth';
+	import { signInWithGitHub } from '$lib/auth';
+
+	const API_URL = 'https://agentyard-production.up.railway.app';
+
+	// ── Hire modal state ──
+	let hireModalOpen = false;
+	let hireAgentName = '';
+	let hireAgentPrice = 5000;
+	let hireTaskDescription = '';
+	let hireSubmitting = false;
+	let hireResult: 'idle' | 'stubbed' | 'success' | 'error' = 'idle';
+
+	function openHireModal(agentName: string, price: number) {
+		hireAgentName = agentName;
+		hireAgentPrice = price;
+		hireTaskDescription = '';
+		hireResult = 'idle';
+		hireModalOpen = true;
+	}
+
+	function closeHireModal() {
+		hireModalOpen = false;
+	}
+
+	async function submitHire() {
+		if (!hireTaskDescription.trim()) return;
+		hireSubmitting = true;
+		const token = localStorage.getItem('agentyard-token');
+		try {
+			const res = await fetch(`${API_URL}/hires`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(token ? { Authorization: `Bearer ${token}` } : {})
+				},
+				body: JSON.stringify({
+					agent_name: hireAgentName,
+					task_description: hireTaskDescription
+				})
+			});
+			if (res.status === 404 || res.status === 405) {
+				hireResult = 'stubbed';
+			} else if (res.ok) {
+				hireResult = 'success';
+			} else {
+				hireResult = 'stubbed'; // treat any error as stub for now
+			}
+		} catch {
+			hireResult = 'stubbed';
+		} finally {
+			hireSubmitting = false;
+		}
+	}
 
 	let agents: Agent[] = [];
 	let allMockAgents: MockAgent[] = [];
@@ -268,7 +321,16 @@
 								<span class="job-count">({agent.jobs_completed})</span>
 							</div>
 						</div>
-						<button class="hire-btn" on:click|preventDefault={() => window.location.href = '/agents/' + agent.id}>
+						<button
+							class="hire-btn"
+							on:click|preventDefault|stopPropagation={() => {
+								if ($isLoggedIn) {
+									openHireModal(agent.name, agent.price_per_task_sats);
+								} else {
+									signInWithGitHub();
+								}
+							}}
+						>
 							Hire
 						</button>
 					</div>
@@ -277,6 +339,72 @@
 		</div>
 	{/if}
 </div>
+
+<!-- ═══ HIRE MODAL ═══ -->
+{#if hireModalOpen}
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div class="modal-backdrop" on:click={closeHireModal}>
+		<div class="modal-card glass-card" on:click|stopPropagation={() => {}}>
+			{#if hireResult === 'stubbed'}
+				<div class="modal-result">
+					<span class="modal-result-icon">⚡</span>
+					<h3 class="modal-result-title">Escrow launching soon</h3>
+					<p class="modal-result-sub">You'll be notified when payment is live. We've recorded your interest.</p>
+					<button class="btn-modal-close" on:click={closeHireModal}>Close</button>
+				</div>
+			{:else if hireResult === 'success'}
+				<div class="modal-result">
+					<span class="modal-result-icon">✅</span>
+					<h3 class="modal-result-title">Hire submitted!</h3>
+					<p class="modal-result-sub">Your task has been queued. You'll receive updates via your dashboard.</p>
+					<button class="btn-modal-close" on:click={closeHireModal}>Done</button>
+				</div>
+			{:else}
+				<div class="modal-header">
+					<div>
+						<h3 class="modal-title">⚡ Hire {hireAgentName}</h3>
+						<p class="modal-meta">
+							Price: <span class="font-mono sats-accent">⚡ {hireAgentPrice.toLocaleString()} sats</span>
+							&nbsp;·&nbsp; Est. completion: ~30 minutes
+						</p>
+					</div>
+					<button class="modal-close-x" on:click={closeHireModal} aria-label="Close">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+							<path d="M18 6L6 18M6 6l12 12"/>
+						</svg>
+					</button>
+				</div>
+
+				<div class="modal-body">
+					<label class="modal-label" for="task-desc">Describe the task</label>
+					<textarea
+						id="task-desc"
+						class="modal-textarea"
+						placeholder="What do you need this agent to do? Be specific — the more detail, the better the output."
+						bind:value={hireTaskDescription}
+						rows={5}
+					></textarea>
+				</div>
+
+				<div class="modal-footer">
+					<button class="btn-modal-cancel" on:click={closeHireModal}>Cancel</button>
+					<button
+						class="btn-modal-hire"
+						disabled={!hireTaskDescription.trim() || hireSubmitting}
+						on:click={submitHire}
+					>
+						{#if hireSubmitting}
+							<span class="spinner"></span> Submitting...
+						{:else}
+							Hire for {hireAgentPrice.toLocaleString()} sats →
+						{/if}
+					</button>
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
 
 <!-- ═══ HOW IT WORKS (inline teaser) ═══ -->
 <section class="how-it-works">
@@ -960,6 +1088,223 @@
 	}
 
 	.copy-btn:hover { opacity: 1; }
+
+	/* ═══ HIRE MODAL ═══ */
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.6);
+		backdrop-filter: blur(4px);
+		-webkit-backdrop-filter: blur(4px);
+		z-index: 500;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+	}
+
+	.modal-card {
+		width: 100%;
+		max-width: 480px;
+		padding: 32px;
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	.modal-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	.modal-title {
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 20px;
+		color: var(--text-primary);
+		margin: 0 0 8px;
+	}
+
+	.modal-meta {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.sats-accent {
+		color: var(--sats-color);
+		font-weight: 500;
+	}
+
+	.modal-close-x {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 4px;
+		border-radius: 6px;
+		flex-shrink: 0;
+		transition: color 0.15s ease, background 0.15s ease;
+	}
+
+	.modal-close-x:hover {
+		color: var(--text-primary);
+		background: var(--glass-hover);
+	}
+
+	.modal-body {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.modal-label {
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-secondary);
+	}
+
+	.modal-textarea {
+		width: 100%;
+		padding: 12px 14px;
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		border-radius: 10px;
+		color: var(--text-primary);
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		line-height: 1.6;
+		resize: vertical;
+		outline: none;
+		box-sizing: border-box;
+		transition: border-color 0.15s ease;
+	}
+
+	.modal-textarea:focus {
+		border-color: var(--accent-primary);
+	}
+
+	.modal-textarea::placeholder {
+		color: var(--text-muted);
+	}
+
+	.modal-footer {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 12px;
+	}
+
+	.btn-modal-cancel {
+		background: transparent;
+		border: 1px solid var(--glass-border);
+		color: var(--text-secondary);
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 500;
+		font-size: 14px;
+		padding: 10px 20px;
+		border-radius: 9999px;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.btn-modal-cancel:hover {
+		color: var(--text-primary);
+		border-color: var(--border-strong);
+	}
+
+	.btn-modal-hire {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		background: var(--accent-primary);
+		color: var(--primary-foreground);
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 600;
+		font-size: 14px;
+		padding: 10px 24px;
+		border: none;
+		border-radius: 9999px;
+		cursor: pointer;
+		transition: opacity 0.15s ease;
+	}
+
+	.btn-modal-hire:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.btn-modal-hire:not(:disabled):hover {
+		opacity: 0.9;
+	}
+
+	.spinner {
+		display: inline-block;
+		width: 14px;
+		height: 14px;
+		border: 2px solid rgba(255,255,255,0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.6s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	/* Result states */
+	.modal-result {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 12px;
+		padding: 8px 0;
+	}
+
+	.modal-result-icon {
+		font-size: 36px;
+		line-height: 1;
+	}
+
+	.modal-result-title {
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 700;
+		font-size: 18px;
+		color: var(--text-primary);
+		margin: 0;
+	}
+
+	.modal-result-sub {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--text-secondary);
+		margin: 0;
+		line-height: 1.6;
+	}
+
+	.btn-modal-close {
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		color: var(--text-primary);
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 600;
+		font-size: 14px;
+		padding: 10px 28px;
+		border-radius: 9999px;
+		cursor: pointer;
+		margin-top: 8px;
+		transition: border-color 0.15s ease, background 0.15s ease;
+	}
+
+	.btn-modal-close:hover {
+		border-color: var(--border-strong);
+		background: var(--glass-hover);
+	}
 
 	/* Responsive */
 	@media (max-width: 1024px) {

@@ -1,5 +1,6 @@
 """AgentYard data models."""
 from .agent import Agent, AgentCreate, AgentUpdate, AgentPublic
+from .agent_profile import AgentProfile, AgentRegisterRequest, AgentProfilePublic
 from .human import Human, HumanCreate, HumanPublic
 from .job import Job, JobCreate, JobStatus, JobPublic, JobDeliverRequest, JobDisputeRequest
 from .transaction import Transaction, TransactionType
@@ -9,6 +10,7 @@ from .user import User
 
 __all__ = [
     "Agent", "AgentCreate", "AgentUpdate", "AgentPublic",
+    "AgentProfile", "AgentRegisterRequest", "AgentProfilePublic",
     "Human", "HumanCreate", "HumanPublic",
     "Job", "JobCreate", "JobStatus", "JobPublic", "JobDeliverRequest", "JobDisputeRequest",
     "Transaction", "TransactionType",

@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.database import init_db, engine
-from api.routers import agents, auth, jobs, admin, webhooks
+from api.routers import agents, auth, jobs, admin, webhooks, wallets
 from config import settings
 
 logging.basicConfig(
@@ -90,6 +90,7 @@ app.include_router(agents.router)
 app.include_router(jobs.router)
 app.include_router(admin.router)
 app.include_router(webhooks.router)
+app.include_router(wallets.router)
 
 
 @app.get("/health", tags=["system"])
