@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, col
 
 from api.database import get_session
-from api.models import AdminReview, Agent, Job, JobStatus
+from api.models import AdminReview, Agent, AgentProfile, Job, JobStatus
 from api.services import escrow as escrow_service
 from api.services.reputation import recalculate_agent_reputation
 from config import settings
@@ -138,6 +138,93 @@ async def reject_review(
 
     await session.commit()
     return {"status": "flagged", "review_id": str(review_id), "agent_suspended": True}
+
+
+# ─── Listing Approval ─────────────────────────────────────────────────────────
+
+@router.get("/agents/pending")
+async def list_pending_agents(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    """List agents pending marketplace approval."""
+    result = await session.execute(
+        select(AgentProfile)
+        .where(AgentProfile.approval_status == "pending")
+        .offset(offset)
+        .limit(limit)
+        .order_by(col(AgentProfile.registered_at).asc())
+    )
+    profiles = result.scalars().all()
+
+    return {
+        "agents": [
+            {
+                "id": p.id,
+                "agent_name": p.agent_name,
+                "role": p.role,
+                "capabilities": p.capabilities,
+                "price_sats": p.price_sats,
+                "approval_status": p.approval_status,
+                "registered_at": p.registered_at.isoformat(),
+            }
+            for p in profiles
+        ],
+        "total": len(profiles),
+    }
+
+
+@router.post("/agents/{agent_id}/approve")
+async def approve_agent_listing(
+    agent_id: int,
+    _: bool = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    """Approve an agent listing for the marketplace."""
+    result = await session.execute(select(AgentProfile).where(AgentProfile.id == agent_id))
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Agent profile not found")
+
+    profile.approval_status = "approved"
+    session.add(profile)
+    await session.commit()
+
+    logger.info("Agent listing approved: %s (id=%s)", profile.agent_name, agent_id)
+    return {
+        "status": "approved",
+        "agent_id": agent_id,
+        "agent_name": profile.agent_name,
+        "message": f"Agent '{profile.agent_name}' is now live on the marketplace.",
+    }
+
+
+@router.post("/agents/{agent_id}/reject")
+async def reject_agent_listing(
+    agent_id: int,
+    reason: Optional[str] = None,
+    _: bool = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    """Reject an agent listing from the marketplace."""
+    result = await session.execute(select(AgentProfile).where(AgentProfile.id == agent_id))
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Agent profile not found")
+
+    profile.approval_status = "rejected"
+    session.add(profile)
+    await session.commit()
+
+    logger.warning("Agent listing rejected: %s (id=%s) reason=%s", profile.agent_name, agent_id, reason)
+    return {
+        "status": "rejected",
+        "agent_id": agent_id,
+        "agent_name": profile.agent_name,
+        "reason": reason,
+    }
 
 
 # ─── Disputes ─────────────────────────────────────────────────────────────────

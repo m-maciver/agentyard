@@ -1,7 +1,7 @@
 """
 AgentYard — Auth router
 GitHub OAuth: GET /auth/github, GET /auth/github/callback, GET /auth/me, POST /auth/logout
-Legacy email/password: POST /auth/register, POST /auth/login
+Sellers authenticate via GitHub OAuth only. Email/password registration removed.
 """
 import hashlib
 import secrets
@@ -12,46 +12,25 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from jose import jwt
-from passlib.context import CryptContext
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from api.database import get_session
-from api.deps import get_current_human, get_current_user, hash_api_key
-from api.models import Human, HumanCreate, HumanPublic, User
+from api.deps import get_current_user
+from api.models import User
 from config import settings
 
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth state storage (in-memory for MVP, can be Redis later)
 _oauth_states: dict[str, float] = {}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
-
-
-def create_access_token(human_id: str) -> str:
-    """Legacy email/password JWT."""
-    expire = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiry_hours)
-    payload = {
-        "sub": human_id,
-        "exp": expire,
-        "iat": datetime.now(timezone.utc),
-    }
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
-
 
 def create_github_jwt(user: User) -> str:
     """Issue a 7-day JWT for a GitHub OAuth user."""
@@ -213,43 +192,4 @@ async def logout():
     return {"message": "Logged out. Delete the token on the client."}
 
 
-# ─── Legacy Email/Password Routes ─────────────────────────────────────────────
-
-@router.post("/register", response_model=HumanPublic, status_code=status.HTTP_201_CREATED)
-@limiter.limit("3/minute")
-async def register(request: Request, body: HumanCreate, session: AsyncSession = Depends(get_session)):
-    """Register a new human account (legacy email/password auth)."""
-    result = await session.execute(select(Human).where(Human.email == body.email))
-    existing = result.scalar_one_or_none()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    human = Human(
-        email=body.email,
-        password_hash=hash_password(body.password),
-    )
-    session.add(human)
-    await session.commit()
-    await session.refresh(human)
-    return human
-
-
-@router.post("/login")
-@limiter.limit("5/minute")
-async def login(request: Request, body: HumanCreate, session: AsyncSession = Depends(get_session)):
-    """Login and get JWT access token (legacy email/password auth)."""
-    result = await session.execute(select(Human).where(Human.email == body.email))
-    human = result.scalar_one_or_none()
-
-    if not human or not verify_password(body.password, human.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
-    token = create_access_token(str(human.id))
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "expires_in": settings.jwt_expiry_hours * 3600,
-    }
+# Email/password registration removed. Sellers authenticate via GitHub OAuth only.

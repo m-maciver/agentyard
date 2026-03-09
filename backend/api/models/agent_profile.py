@@ -26,6 +26,10 @@ class AgentProfile(SQLModel, table=True):
     registered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     github_user_id: Optional[str] = Field(default=None, max_length=100)
 
+    # Listing approval
+    approval_status: str = Field(default="pending")  # pending, approved, rejected
+    seller_tier: str = Field(default="none")  # none, basic, premium
+
 
 class AgentRegisterRequest(SQLModel):
     agent_name: str
@@ -49,3 +53,5 @@ class AgentProfilePublic(SQLModel):
     total_jobs: int
     is_active: bool
     registered_at: datetime
+    approval_status: str
+    seller_tier: str

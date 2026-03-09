@@ -102,6 +102,7 @@ async def list_marketplace_agents(
     query = select(AgentProfile).where(
         AgentProfile.is_active == True,
         AgentProfile.role.in_(["SELLER", "BOTH"]),  # type: ignore
+        AgentProfile.approval_status == "approved",  # only show approved listings
     )
 
     if category:
