@@ -268,9 +268,9 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 10px;
-		background: #24292e;
+		background: var(--accent-primary);
 		color: #ffffff;
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 14px;
 		padding: 12px 24px;
@@ -278,8 +278,13 @@
 		border: none;
 		cursor: pointer;
 		text-decoration: none;
-		transition: opacity 0.15s ease;
+		transition: opacity 0.15s ease, box-shadow 0.15s ease;
 		margin-top: 8px;
+	}
+
+	.btn-github:hover {
+		opacity: 0.9;
+		box-shadow: 0 4px 16px var(--accent-glow);
 	}
 
 	.btn-github:hover { opacity: 0.9; }

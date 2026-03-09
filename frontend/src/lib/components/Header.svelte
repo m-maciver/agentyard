@@ -225,11 +225,11 @@
 	}
 
 	.wordmark-text {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 18px;
 		color: var(--text-primary);
-		letter-spacing: 0.01em;
+		letter-spacing: -0.01em;
 	}
 
 	.lightning {
@@ -247,7 +247,7 @@
 	}
 
 	.nav-link {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 500;
 		font-size: 14px;
 		color: var(--text-secondary);
@@ -295,34 +295,36 @@
 		background: var(--glass-hover);
 	}
 
-	/* Connect button */
+	/* Connect button — purple CTA */
 	.connect-btn {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
-		font-family: 'DM Sans', sans-serif;
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 13px;
 		padding: 8px 18px;
 		border: none;
 		border-radius: 9999px;
 		cursor: pointer;
-		transition: opacity 0.15s ease, transform 0.1s ease;
+		transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 		white-space: nowrap;
+		letter-spacing: 0.01em;
 	}
 
 	.connect-btn:hover {
 		opacity: 0.9;
 		transform: translateY(-1px);
+		box-shadow: 0 4px 16px var(--accent-glow);
 	}
 
 	/* Dev login button */
 	.dev-login-btn {
 		background: rgba(59, 130, 246, 0.15);
 		color: #3b82f6;
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 500;
 		font-size: 12px;
 		padding: 6px 12px;
@@ -372,8 +374,8 @@
 		height: 28px;
 		border-radius: 50%;
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
-		font-family: 'DM Sans', sans-serif;
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 12px;
 		display: flex;
@@ -382,7 +384,7 @@
 	}
 
 	.username {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 500;
 		font-size: 13px;
 	}
@@ -398,7 +400,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 	}
 
 	.wallet-balance-row {
@@ -409,13 +411,13 @@
 	}
 
 	.wallet-label {
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 12px;
 		color: var(--text-muted);
 	}
 
 	.wallet-amount {
-		font-family: 'JetBrains Mono', monospace;
+		font-family: var(--font-mono, monospace);
 		font-size: 13px;
 		color: var(--sats-color);
 		font-weight: 500;
@@ -433,7 +435,7 @@
 		gap: 10px;
 		padding: 8px 12px;
 		border-radius: 8px;
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 14px;
 		color: var(--text-secondary);
 		text-decoration: none;
@@ -486,7 +488,7 @@
 	}
 
 	.mobile-nav-link {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 15px;
 		font-weight: 500;
 		color: var(--text-secondary);
@@ -522,8 +524,8 @@
 
 	.mobile-connect-btn {
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
-		font-family: 'DM Sans', sans-serif;
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 15px;
 		padding: 12px 16px;

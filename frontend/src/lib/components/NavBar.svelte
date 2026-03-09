@@ -28,19 +28,11 @@
 	<div class="nav-inner">
 		<!-- Logo -->
 		<a href="/" class="logo">
-			<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-				<polygon points="14,2 25,8 25,20 14,26 3,20 3,8" fill="#F7931A" />
-				<path
-					d="M15 7l-6 8h5l-1 6 7-9h-5l1-5z"
-					fill="white"
-					stroke="white"
-					stroke-width="0.5"
-					stroke-linejoin="round"
-				/>
+			<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<rect width="26" height="26" rx="8" fill="#7C3AED"/>
+				<path d="M14 5l-7 9h6l-1 7 8-10h-6l1-6z" fill="white" stroke="white" stroke-width="0.4" stroke-linejoin="round"/>
 			</svg>
-			<span class="wordmark">
-				<span style="font-weight: 400;">agent</span><span style="font-weight: 700;">Yard</span>
-			</span>
+			<span class="wordmark">AgentYard</span>
 		</a>
 
 		<!-- Desktop nav links -->
@@ -230,8 +222,9 @@
 	}
 
 	.wordmark {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 18px;
+		font-weight: 700;
 		color: var(--foreground);
 	}
 
@@ -243,7 +236,7 @@
 	}
 
 	.nav-link {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 500;
 		font-size: 14px;
 		color: var(--muted-foreground);
@@ -299,18 +292,20 @@
 
 	.connect-btn {
 		font-size: 14px;
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 8px 16px;
-		background: none;
+		font-weight: 600;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
+		color: #ffffff;
+		background: var(--accent-primary, #7C3AED);
+		border: none;
+		border-radius: 9999px;
+		padding: 8px 18px;
 		cursor: pointer;
+		transition: opacity 0.15s ease, transform 0.1s ease;
 	}
 
 	.connect-btn:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-		background: rgba(247, 147, 26, 0.05);
+		opacity: 0.9;
+		transform: translateY(-1px);
 	}
 
 	.avatar-btn {
@@ -577,19 +572,19 @@
 	}
 
 	.close-modal-btn {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		font-family: 'Space Grotesk', sans-serif;
+		background: var(--accent-primary, #7C3AED);
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 14px;
 		padding: 10px 24px;
 		border: none;
-		border-radius: 8px;
+		border-radius: 9999px;
 		cursor: pointer;
-		transition: background 150ms;
+		transition: opacity 0.15s ease;
 	}
 
 	.close-modal-btn:hover {
-		background: #c97612;
+		opacity: 0.9;
 	}
 </style>

@@ -467,9 +467,9 @@
 		align-items: center;
 		gap: 8px;
 		background: var(--accent-subtle);
-		border: 1px solid rgba(245, 158, 11, 0.2);
-		color: var(--accent-primary);
-		font-family: 'Inter', sans-serif;
+		border: 1px solid var(--accent-border);
+		color: var(--accent-violet);
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 12px;
 		font-weight: 500;
 		padding: 6px 14px;
@@ -487,9 +487,9 @@
 	}
 
 	.hero-headline {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
-		font-size: clamp(36px, 5vw, 58px);
+		font-size: clamp(34px, 5vw, 56px);
 		line-height: 1.1;
 		color: var(--text-primary);
 		margin: 0 0 20px;
@@ -497,11 +497,14 @@
 	}
 
 	.headline-accent {
-		color: var(--accent-primary);
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-violet));
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
 	}
 
 	.hero-sub {
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 18px;
 		color: var(--text-secondary);
 		margin: 0 0 40px;
@@ -522,21 +525,22 @@
 		align-items: center;
 		gap: 8px;
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
-		font-family: 'DM Sans', sans-serif;
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 15px;
 		padding: 13px 28px;
 		border: none;
 		border-radius: 9999px;
 		cursor: pointer;
-		transition: opacity 0.15s ease, transform 0.1s ease;
+		transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 		text-decoration: none;
 	}
 
 	.cta-primary:hover {
 		opacity: 0.9;
 		transform: translateY(-2px);
+		box-shadow: 0 6px 24px var(--accent-glow);
 	}
 
 	.cta-secondary {
@@ -545,7 +549,7 @@
 		gap: 8px;
 		background: transparent;
 		color: var(--text-secondary);
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 500;
 		font-size: 15px;
 		padding: 13px 24px;
@@ -557,7 +561,7 @@
 
 	.cta-secondary:hover {
 		color: var(--text-primary);
-		border-color: var(--accent-primary);
+		border-color: var(--accent-border);
 		background: var(--accent-subtle);
 	}
 
@@ -580,14 +584,14 @@
 	}
 
 	.stat-num {
-		font-family: 'JetBrains Mono', monospace;
+		font-family: var(--font-mono, monospace);
 		font-weight: 500;
 		font-size: 20px;
 		color: var(--text-primary);
 	}
 
 	.stat-label {
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 11px;
 		color: var(--text-muted);
 		text-transform: uppercase;
@@ -632,7 +636,7 @@
 	.filter-chips::-webkit-scrollbar { display: none; }
 
 	.filter-chip {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 500;
 		font-size: 13px;
 		padding: 6px 14px;
@@ -652,7 +656,7 @@
 
 	.filter-chip.active {
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
+		color: #ffffff;
 		border-color: var(--accent-primary);
 	}
 
@@ -687,7 +691,7 @@
 		background: none;
 		border: none;
 		outline: none;
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 13px;
 		color: var(--text-primary);
 		width: 150px;
@@ -700,7 +704,7 @@
 		color: var(--text-secondary);
 		border: 1px solid var(--glass-border);
 		border-radius: 8px;
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 13px;
 		padding: 7px 10px;
 		outline: none;
@@ -721,10 +725,10 @@
 		gap: 8px;
 		padding: 8px 24px;
 		background: var(--accent-subtle);
-		color: var(--accent-primary);
-		font-family: 'Inter', sans-serif;
+		color: var(--accent-violet);
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 13px;
-		border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+		border-bottom: 1px solid var(--accent-border);
 	}
 
 	/* ═══ GRID ═══ */
@@ -751,11 +755,6 @@
 		cursor: pointer;
 	}
 
-	.agent-card:hover .hire-btn {
-		background: var(--accent-primary);
-		color: var(--primary-foreground);
-	}
-
 	.card-header {
 		display: flex;
 		align-items: center;
@@ -767,9 +766,9 @@
 		height: 44px;
 		border-radius: 12px;
 		background: var(--accent-subtle);
-		border: 1px solid var(--accent-glow);
-		color: var(--accent-primary);
-		font-family: 'DM Sans', sans-serif;
+		border: 1px solid var(--accent-border);
+		color: var(--accent-violet);
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 18px;
 		display: flex;
@@ -790,7 +789,7 @@
 	}
 
 	.agent-name {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 16px;
 		color: var(--text-primary);
@@ -804,7 +803,7 @@
 		height: 16px;
 		border-radius: 50%;
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
+		color: #ffffff;
 		font-size: 9px;
 		font-weight: 700;
 		flex-shrink: 0;
@@ -902,13 +901,20 @@
 		background: var(--glass-bg);
 		border: 1px solid var(--border-strong);
 		color: var(--text-primary);
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 13px;
 		padding: 8px 20px;
 		border-radius: 9999px;
 		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.agent-card:hover .hire-btn {
+		background: var(--accent-primary);
+		color: #ffffff;
+		border-color: var(--accent-primary);
+		box-shadow: 0 4px 12px var(--accent-glow);
 	}
 
 	/* Skeleton card */
@@ -986,7 +992,7 @@
 	}
 
 	.hiw-title {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 32px;
 		color: var(--text-primary);
@@ -995,7 +1001,7 @@
 	}
 
 	.hiw-sub {
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 16px;
 		color: var(--text-secondary);
 		margin: 0 0 48px;
@@ -1019,9 +1025,9 @@
 	}
 
 	.hiw-step-num {
-		font-family: 'JetBrains Mono', monospace;
+		font-family: var(--font-mono, monospace);
 		font-size: 11px;
-		color: var(--accent-primary);
+		color: var(--accent-violet);
 		font-weight: 500;
 		letter-spacing: 0.1em;
 		display: block;
@@ -1029,7 +1035,7 @@
 	}
 
 	.hiw-step h3 {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 16px;
 		color: var(--text-primary);
@@ -1037,7 +1043,7 @@
 	}
 
 	.hiw-step p {
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 13px;
 		color: var(--text-secondary);
 		margin: 0;
@@ -1072,9 +1078,9 @@
 	}
 
 	.code-snippet code {
-		font-family: 'JetBrains Mono', monospace;
+		font-family: var(--font-mono, monospace);
 		font-size: 14px;
-		color: var(--accent-primary);
+		color: var(--accent-violet);
 	}
 
 	.copy-btn {
@@ -1120,7 +1126,7 @@
 	}
 
 	.modal-title {
-		font-family: 'DM Sans', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 20px;
 		color: var(--text-primary);
@@ -1128,7 +1134,7 @@
 	}
 
 	.modal-meta {
-		font-family: 'Inter', sans-serif;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 14px;
 		color: var(--text-secondary);
 		margin: 0;
@@ -1222,15 +1228,15 @@
 		align-items: center;
 		gap: 8px;
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
-		font-family: 'DM Sans', sans-serif;
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 600;
 		font-size: 14px;
 		padding: 10px 24px;
 		border: none;
 		border-radius: 9999px;
 		cursor: pointer;
-		transition: opacity 0.15s ease;
+		transition: opacity 0.15s ease, box-shadow 0.15s ease;
 	}
 
 	.btn-modal-hire:disabled {

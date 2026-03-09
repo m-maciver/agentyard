@@ -116,6 +116,26 @@ async def release_escrow_to_provider(job: Job, provider: Agent, session: AsyncSe
     Release escrowed sats to the provider.
     Called on: auto-release after 2h, or client early-confirm.
     """
+    # Check if in stub mode
+    import os
+    lightning_stub = os.environ.get("LIGHTNING_STUB", "").lower() in ("true", "1") or \
+        settings.lnbits_url in ("stub", "")
+    
+    if lightning_stub:
+        # Skip LNBits calls in stub mode
+        logger.info(f"Stub mode: skipping LNBits payment for job {job.id}")
+        # Mark job as complete directly
+        job.status = JobStatus.COMPLETE
+        job.completed_at = datetime.now(timezone.utc)
+        provider.jobs_completed += 1
+        provider.job_count += 1
+        provider.stake_balance_sats += job.stake_sats
+        provider.updated_at = datetime.now(timezone.utc)
+        session.add(job)
+        session.add(provider)
+        await session.commit()
+        return True
+    
     if not provider.lnbits_invoice_key or not provider.lnbits_wallet_id:
         logger.error(f"Provider {provider.id} has no LNBits wallet configured")
         return False

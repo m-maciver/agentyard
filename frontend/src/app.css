@@ -1,96 +1,107 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   DESIGN TOKENS — Dark mode (default)
+   DESIGN TOKENS — Dark theme (default)
 ═══════════════════════════════════════════════════ */
 :root {
-	--bg-base: #0d0d14;
-	--bg-surface: #12121f;
-	--bg-elevated: #1a1a2e;
-	--glass-bg: rgba(255, 255, 255, 0.04);
-	--glass-border: rgba(255, 255, 255, 0.08);
-	--glass-hover: rgba(255, 255, 255, 0.07);
+	/* ── Backgrounds ── */
+	--bg-base:     #0a0a0f;
+	--bg-surface:  #111118;
+	--bg-elevated: #17171f;
+	--glass-bg:    rgba(255, 255, 255, 0.03);
+	--glass-border: rgba(255, 255, 255, 0.07);
+	--glass-hover: rgba(255, 255, 255, 0.06);
 
-	--text-primary: #f0f0f8;
+	/* ── Text ── */
+	--text-primary:   #f0f0f8;
 	--text-secondary: #8888aa;
-	--text-muted: #55556a;
+	--text-muted:     #55556a;
 
-	--accent-primary: #F59E0B;
-	--accent-glow: rgba(245, 158, 11, 0.15);
-	--accent-subtle: rgba(245, 158, 11, 0.08);
-	--sats-color: #F59E0B;
+	/* ── Accent — Electric Purple ── */
+	--accent-primary:  #7C3AED;
+	--accent-violet:   #a855f7;
+	--accent-glow:     rgba(124, 58, 237, 0.18);
+	--accent-subtle:   rgba(124, 58, 237, 0.09);
+	--accent-border:   rgba(124, 58, 237, 0.25);
 
+	/* ── Lightning / Sats (kept amber — semantic for Bitcoin) ── */
+	--sats-color: #f59e0b;
+
+	/* ── Borders ── */
 	--border-subtle: rgba(255, 255, 255, 0.06);
-	--border-strong: rgba(255, 255, 255, 0.12);
+	--border-strong: rgba(255, 255, 255, 0.11);
 
-	/* Legacy compat for existing components */
-	--background: var(--bg-base);
-	--foreground: var(--text-primary);
-	--card: var(--bg-surface);
-	--card-foreground: var(--text-primary);
-	--primary: var(--accent-primary);
-	--primary-foreground: #0a0a0f;
-	--secondary: var(--bg-elevated);
+	/* ── Typography ── */
+	--font-sans: -apple-system, 'Inter', 'Segoe UI', system-ui, sans-serif;
+	--font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+
+	/* ── Legacy compat (still referenced by components) ── */
+	--background:         var(--bg-base);
+	--foreground:         var(--text-primary);
+	--card:               var(--bg-surface);
+	--card-foreground:    var(--text-primary);
+	--primary:            var(--accent-primary);
+	--primary-foreground: #ffffff;
+	--secondary:          var(--bg-elevated);
 	--secondary-foreground: var(--text-secondary);
-	--muted: var(--bg-elevated);
-	--muted-foreground: var(--text-secondary);
-	--accent: var(--accent-primary);
-	--accent-foreground: #0a0a0f;
-	--destructive: #ef4444;
-	--success: #22c55e;
-	--warning: #f59e0b;
-	--info: #3b82f6;
-	--border: var(--border-subtle);
+	--muted:              var(--bg-elevated);
+	--muted-foreground:   var(--text-secondary);
+	--accent:             var(--accent-primary);
+	--accent-foreground:  #ffffff;
+	--destructive:        #ef4444;
+	--success:            #22c55e;
+	--warning:            #f59e0b;
+	--info:               #3b82f6;
+	--border:             var(--border-subtle);
 	--border-strong-compat: var(--border-strong);
-	--input: var(--bg-elevated);
-	--ring: var(--accent-primary);
+	--input:              var(--bg-elevated);
+	--ring:               var(--accent-primary);
 	--surface-0: var(--bg-base);
 	--surface-1: var(--bg-surface);
 	--surface-2: var(--bg-elevated);
-	--surface-3: rgba(255, 255, 255, 0.06);
+	--surface-3: rgba(255, 255, 255, 0.05);
 }
 
 /* ═══════════════════════════════════════════════════
-   LIGHT MODE
+   LIGHT MODE (kept for compatibility — UI is dark-only)
 ═══════════════════════════════════════════════════ */
 :root.light {
-	--bg-base: #faf9f6;
-	--bg-surface: #ffffff;
+	--bg-base:     #faf9f6;
+	--bg-surface:  #ffffff;
 	--bg-elevated: #f4f3ef;
-	--glass-bg: rgba(255, 255, 255, 0.7);
+	--glass-bg:    rgba(255, 255, 255, 0.7);
 	--glass-border: rgba(0, 0, 0, 0.08);
 	--glass-hover: rgba(0, 0, 0, 0.04);
 
-	--text-primary: #1a1a2e;
+	--text-primary:   #1a1a2e;
 	--text-secondary: #555570;
-	--text-muted: #9999aa;
+	--text-muted:     #9999aa;
 
-	--accent-primary: #e8830a;
-	--accent-glow: rgba(232, 131, 10, 0.12);
-	--accent-subtle: rgba(232, 131, 10, 0.06);
-	--sats-color: #F59E0B;
+	--accent-primary:  #6d28d9;
+	--accent-violet:   #9333ea;
+	--accent-glow:     rgba(109, 40, 217, 0.12);
+	--accent-subtle:   rgba(109, 40, 217, 0.07);
+	--accent-border:   rgba(109, 40, 217, 0.2);
 
 	--border-subtle: rgba(0, 0, 0, 0.06);
 	--border-strong: rgba(0, 0, 0, 0.1);
 
-	/* Legacy compat */
-	--background: var(--bg-base);
-	--foreground: var(--text-primary);
-	--card: var(--bg-surface);
-	--card-foreground: var(--text-primary);
-	--primary: var(--accent-primary);
+	--background:         var(--bg-base);
+	--foreground:         var(--text-primary);
+	--card:               var(--bg-surface);
+	--card-foreground:    var(--text-primary);
+	--primary:            var(--accent-primary);
 	--primary-foreground: #ffffff;
-	--secondary: var(--bg-elevated);
+	--secondary:          var(--bg-elevated);
 	--secondary-foreground: var(--text-secondary);
-	--muted: var(--bg-elevated);
-	--muted-foreground: var(--text-secondary);
-	--accent: var(--accent-primary);
-	--accent-foreground: #ffffff;
-	--border: var(--border-subtle);
+	--muted:              var(--bg-elevated);
+	--muted-foreground:   var(--text-secondary);
+	--accent:             var(--accent-primary);
+	--accent-foreground:  #ffffff;
+	--border:             var(--border-subtle);
 	--border-strong-compat: var(--border-strong);
-	--input: var(--bg-elevated);
-	--ring: var(--accent-primary);
+	--input:              var(--bg-elevated);
+	--ring:               var(--accent-primary);
 	--surface-0: var(--bg-base);
 	--surface-1: var(--bg-surface);
 	--surface-2: var(--bg-elevated);
@@ -98,7 +109,7 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   THEME TRANSITION (enabled after mount via .theme-ready)
+   THEME TRANSITION
 ═══════════════════════════════════════════════════ */
 html.theme-ready,
 html.theme-ready * {
@@ -115,19 +126,21 @@ html.theme-ready * {
 html, body {
 	background-color: var(--bg-base);
 	color: var(--text-primary);
-	font-family: 'Inter', sans-serif;
+	font-family: var(--font-sans);
 	margin: 0;
 	padding: 0;
 	min-height: 100vh;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
-	font-family: 'DM Sans', sans-serif;
-	letter-spacing: 0.01em;
+	font-family: var(--font-sans);
+	letter-spacing: -0.01em;
 }
 
 /* ═══════════════════════════════════════════════════
-   GLASS CARD — core reusable component
+   GLASS CARD
 ═══════════════════════════════════════════════════ */
 .glass-card {
 	background: var(--glass-bg);
@@ -148,15 +161,16 @@ h1, h2, h3, h4, h5, h6 {
    TYPOGRAPHY HELPERS
 ═══════════════════════════════════════════════════ */
 .font-display {
-	font-family: 'DM Sans', sans-serif !important;
+	font-family: var(--font-sans) !important;
+	font-weight: 700;
 }
 
 .font-mono {
-	font-family: 'JetBrains Mono', monospace !important;
+	font-family: var(--font-mono) !important;
 }
 
 .font-body {
-	font-family: 'Inter', sans-serif !important;
+	font-family: var(--font-sans) !important;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -191,25 +205,25 @@ h1, h2, h3, h4, h5, h6 {
 	position: absolute;
 	inset: 0;
 	background-image:
-		linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+		linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
 	background-size: 40px 40px;
-	animation: grid-drift 8s linear infinite;
+	animation: grid-drift 12s linear infinite;
 	pointer-events: none;
 }
 
 :root.light .hero-bg {
 	background-image:
-		linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+		linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
 }
 
 /* ═══════════════════════════════════════════════════
-   PULSE DOT
+   PULSE DOT — purple
 ═══════════════════════════════════════════════════ */
 @keyframes pulse-ring {
-	0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
-	50%       { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15); }
+	0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4); }
+	50%       { box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12); }
 }
 
 .pulse-dot {
@@ -219,7 +233,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ═══════════════════════════════════════════════════
    SCROLLBAR
 ═══════════════════════════════════════════════════ */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg-base); }
 ::-webkit-scrollbar-thumb {
 	background: var(--border-strong);
@@ -237,7 +251,7 @@ h1, h2, h3, h4, h5, h6 {
 	gap: 8px;
 	background: var(--accent-primary);
 	color: var(--primary-foreground);
-	font-family: 'DM Sans', sans-serif;
+	font-family: var(--font-sans);
 	font-weight: 600;
 	font-size: 14px;
 	padding: 10px 24px;
@@ -245,12 +259,13 @@ h1, h2, h3, h4, h5, h6 {
 	border-radius: 9999px;
 	cursor: pointer;
 	text-decoration: none;
-	transition: opacity 0.15s ease, transform 0.1s ease;
+	transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
 
 .btn-primary:hover {
 	opacity: 0.9;
 	transform: translateY(-1px);
+	box-shadow: 0 4px 16px var(--accent-glow);
 }
 
 .btn-ghost {
@@ -260,7 +275,7 @@ h1, h2, h3, h4, h5, h6 {
 	gap: 8px;
 	background: transparent;
 	color: var(--text-secondary);
-	font-family: 'DM Sans', sans-serif;
+	font-family: var(--font-sans);
 	font-weight: 500;
 	font-size: 14px;
 	padding: 10px 20px;

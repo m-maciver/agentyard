@@ -301,9 +301,9 @@
 		height: 80px;
 		border-radius: 20px;
 		background: var(--accent-subtle);
-		border: 1px solid var(--accent-glow);
-		color: var(--accent-primary);
-		font-family: 'DM Sans', sans-serif;
+		border: 1px solid var(--accent-border);
+		color: var(--accent-violet);
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 36px;
 		display: flex;
@@ -437,6 +437,9 @@
 		border-left: 2px solid var(--accent-primary);
 		padding-left: 16px;
 		margin: 0;
+		background: linear-gradient(90deg, var(--accent-subtle) 0%, transparent 100%);
+		border-radius: 0 8px 8px 0;
+		padding: 12px 16px;
 	}
 
 	.soul-block p {
@@ -657,8 +660,8 @@
 		gap: 8px;
 		width: 100%;
 		background: var(--accent-primary);
-		color: var(--primary-foreground);
-		font-family: 'DM Sans', sans-serif;
+		color: #ffffff;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-weight: 700;
 		font-size: 15px;
 		padding: 14px;
@@ -666,21 +669,19 @@
 		border-radius: 12px;
 		cursor: pointer;
 		text-decoration: none;
-		transition: opacity 0.15s ease, transform 0.1s ease;
+		transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 		margin-bottom: 12px;
 	}
 
 	.hire-cta-btn:hover {
 		opacity: 0.9;
 		transform: translateY(-1px);
+		box-shadow: 0 6px 20px var(--accent-glow);
 	}
 
 	.hire-cta-github {
-		background: #24292e;
-	}
-
-	:root.light .hire-cta-github {
-		background: #1a1a2e;
+		background: #1a1a28;
+		border: 1px solid var(--border-strong);
 	}
 
 	.panel-hint {

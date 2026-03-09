@@ -127,6 +127,67 @@ async def list_marketplace_agents(
     }
 
 
+
+
+
+def generate_api_key() -> str:
+    """Generate a new agent API key: ay_live_{32 random hex chars}"""
+    return f"ay_live_{secrets.token_hex(32)}"
+
+
+# UUID route registered FIRST to take priority
+@router.get("/{agent_id}", response_model=AgentPublic)
+async def get_agent(agent_id: UUID, session: AsyncSession = Depends(get_session)):
+    """Get agent profile by ID (legacy JWT-registered agents)."""
+    result = await session.execute(select(Agent).where(Agent.id == agent_id))
+    agent = result.scalar_one_or_none()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return agent
+
+
+# Name route registered AFTER UUID route (lower priority)
+@router.get("/{agent_name}", response_model=AgentProfilePublic)
+async def get_agent_by_name(
+    agent_name: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get agent profile by name (skill-registered agents + JWT agents)."""
+    # Skip UUID-like strings (handled by the UUID endpoint above)
+    import re
+    UUID_PATTERN = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        re.IGNORECASE,
+    )
+    if UUID_PATTERN.match(agent_name):
+        raise HTTPException(status_code=404, detail="Use /agents/{uuid} for legacy agents")
+
+    # Search both AgentProfile and Agent tables
+    # First try AgentProfile (skill-registered)
+    result = await session.execute(
+        select(AgentProfile).where(AgentProfile.agent_name == agent_name)
+    )
+    profile = result.scalar_one_or_none()
+    if profile:
+        return profile
+    
+    # Fall back to Agent table (JWT-registered agents)
+    agent_result = await session.execute(
+        select(Agent).where(Agent.name == agent_name)
+    )
+    agent = agent_result.scalar_one_or_none()
+    if agent:
+        # Convert Agent to AgentProfilePublic-compatible response
+        # For now, return 404 since Agent doesn't match AgentProfile schema
+        # But client can use the UUID endpoint instead
+        raise HTTPException(
+            status_code=404,
+            detail=f"Agent '{agent_name}' found but use /agents/{agent.id} (UUID endpoint) to fetch JWT-registered agents"
+        )
+    
+    raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+
+
 @router.get("/{agent_name}/balance", response_model=dict)
 async def get_agent_balance(
     agent_name: str,
@@ -162,35 +223,6 @@ async def get_agent_balance(
         logger.warning("LNbits balance check failed for %s: %s", agent_name, e)
 
     return {"balance_sats": profile.wallet_balance_sats}
-
-
-@router.get("/{agent_name}", response_model=AgentProfilePublic)
-async def get_agent_by_name(
-    agent_name: str,
-    session: AsyncSession = Depends(get_session),
-):
-    """Get agent profile by name (skill-registered agents)."""
-    # Skip UUID-like strings (those are handled by the existing UUID endpoint)
-    import re
-    UUID_PATTERN = re.compile(
-        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        re.IGNORECASE,
-    )
-    if UUID_PATTERN.match(agent_name):
-        raise HTTPException(status_code=404, detail="Use /agents/{uuid} for legacy agents")
-
-    result = await session.execute(
-        select(AgentProfile).where(AgentProfile.agent_name == agent_name)
-    )
-    profile = result.scalar_one_or_none()
-    if not profile:
-        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
-    return profile
-
-
-def generate_api_key() -> str:
-    """Generate a new agent API key: ay_live_{32 random hex chars}"""
-    return f"ay_live_{secrets.token_hex(32)}"
 
 
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -265,16 +297,6 @@ async def list_agents(
         "limit": limit,
         "offset": offset,
     }
-
-
-@router.get("/{agent_id}", response_model=AgentPublic)
-async def get_agent(agent_id: UUID, session: AsyncSession = Depends(get_session)):
-    """Get agent profile by ID."""
-    result = await session.execute(select(Agent).where(Agent.id == agent_id))
-    agent = result.scalar_one_or_none()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
 
 
 @router.put("/{agent_id}", response_model=AgentPublic)
