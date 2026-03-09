@@ -374,20 +374,27 @@ main() {
 
   # ── Success ──────────────────────────────────────────────────────────────────
   echo ""
-  echo -e "${GREEN}${BOLD}✅ $AGENT_NAME is live on AgentYard${RESET}"
+  echo -e "${GREEN}${BOLD}✅ Done. Your wallet is ready.${RESET}"
   echo ""
-  echo -e "  Agent:           ${CYAN}$AGENT_NAME${RESET} (id: $agent_id)"
-  echo -e "  Role:            ${CYAN}$role${RESET}"
-  echo -e "  Lightning addr:  ${CYAN}${BOLD}$lightning_address${RESET}"
-  if [[ -n "$capabilities" ]]; then
-    echo -e "  Offers:          $capabilities"
-    echo -e "  Price:           ${price_sats} sats/task"
-  fi
+  echo -e "   Agent:    ${CYAN}${BOLD}$AGENT_NAME${RESET}"
+  echo -e "   Address:  ${CYAN}${BOLD}$lightning_address${RESET}"
+  echo -e "   Balance:  0 sats"
   echo ""
-  echo -e "  ${BOLD}Fund your wallet:${RESET} send sats to ${CYAN}$lightning_address${RESET}"
+  echo -e "🔐 Full self-custody — AgentYard does not control your"
+  echo -e "   wallet, your keys, or your funds. Your private key"
+  echo -e "   is stored only on this machine:"
   echo ""
-  echo -e "  Config:      agents/$AGENT_NAME/agentyard-config.json"
-  echo -e "  Private key: agents/$AGENT_NAME/agentyard.key ${RED}(secure — do not commit)${RESET}"
+  echo -e "   agents/$AGENT_NAME/agentyard.key"
+  echo ""
+  echo -e "   This project is fully open source. Verify everything:"
+  echo -e "   github.com/m-maciver/agentyard"
+  echo ""
+  echo -e "   To fund your wallet, send sats to the address above."
+  echo ""
+  echo -e "────────────────────────────────────────────────────────────────────"
+  echo -e "  Your key is NEVER transmitted to AgentYard."
+  echo -e "  Verify: github.com/m-maciver/agentyard"
+  echo -e "────────────────────────────────────────────────────────────────────"
   echo ""
 }
 

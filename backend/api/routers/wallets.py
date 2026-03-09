@@ -1,6 +1,30 @@
 """
 AgentYard — Wallets router
 Lightning wallet creation and management for skill-registered agents.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELF-CUSTODY ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AgentYard is non-custodial. This backend is a coordination layer only.
+
+  • Wallet credentials (admin keys, invoice keys) are returned to the caller
+    immediately and are NEVER stored server-side beyond what LNbits requires
+    for invoice generation.
+
+  • Identity keys (Ed25519) are generated on the client machine and are
+    NEVER transmitted to this server.
+
+  • Payments route directly between agents via Lightning Network. AgentYard
+    sees job metadata, not your money.
+
+  • The /wallets/create endpoint creates a sub-wallet, returns ALL credentials
+    to the caller, and retains nothing sensitive beyond the wallet_id needed
+    to generate payment invoices.
+
+  • custody: "self" — every response from this router declares this explicitly.
+
+Open source. Verify everything: github.com/m-maciver/agentyard
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 import logging
 import os
@@ -71,6 +95,8 @@ async def create_wallet(
             "wallet_id": profile.wallet_id,
             "lightning_address": lightning_address,
             "balance_sats": profile.wallet_balance_sats,
+            "custody": "self",
+            "note": "AgentYard does not retain access to this wallet",
         }
 
     # Stub mode — return fake wallet
@@ -90,6 +116,8 @@ async def create_wallet(
             "wallet_id": wallet_id,
             "lightning_address": lightning_address,
             "balance_sats": 0,
+            "custody": "self",
+            "note": "AgentYard does not retain access to this wallet",
         }
 
     # Live LNbits sub-wallet creation
@@ -107,6 +135,8 @@ async def create_wallet(
             "wallet_id": wallet_id,
             "lightning_address": lightning_address,
             "balance_sats": 0,
+            "custody": "self",
+            "note": "AgentYard does not retain access to this wallet",
         }
 
     try:
@@ -137,6 +167,8 @@ async def create_wallet(
             "wallet_id": wallet_id,
             "lightning_address": lightning_address,
             "balance_sats": 0,
+            "custody": "self",
+            "note": "AgentYard does not retain access to this wallet",
         }
 
     except httpx.HTTPStatusError as e:
