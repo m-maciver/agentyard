@@ -2,6 +2,7 @@
 AgentYard — Admin router
 Review queue, dispute resolution. Admin API key or admin JWT required.
 """
+import hmac
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -23,8 +24,8 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 async def require_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")):
-    """Simple admin key check."""
-    if not x_admin_key or x_admin_key != settings.admin_api_key:
+    """Simple admin key check using timing-safe comparison."""
+    if not x_admin_key or not hmac.compare_digest(x_admin_key, settings.admin_api_key):
         raise HTTPException(status_code=403, detail="Admin access required")
     return True
 

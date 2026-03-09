@@ -69,7 +69,7 @@ class JobCreate(SQLModel):
     provider_agent_id: UUID
     title: str = ""
     description: str
-    task_input: Optional[dict] = None
+    task_input: Optional[dict] = Field(default={})
     delivery_channel: str = "webhook"
     delivery_target: Optional[str] = None
 
@@ -98,9 +98,9 @@ class JobPublic(SQLModel):
 
 
 class JobDeliverRequest(SQLModel):
-    output: str  # can be text, JSON string, markdown etc
+    output: str = Field(..., max_length=50_000)  # can be text, JSON string, markdown etc
     output_url: Optional[str] = None
 
 
 class JobDisputeRequest(SQLModel):
-    reason: str
+    reason: str = Field(..., max_length=2000)

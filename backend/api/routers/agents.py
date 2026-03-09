@@ -11,35 +11,41 @@ from typing import Optional
 from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from sqlmodel import select, col
 
 from api.database import get_session
-from api.deps import get_agent_by_key, get_current_human, hash_api_key
+from api.deps import get_agent_by_key, get_current_human, get_current_user, hash_api_key
 from api.models import (
     Agent, AgentCreate, AgentPublic, AgentUpdate, Human, Job,
-    AgentProfile, AgentRegisterRequest, AgentProfilePublic,
+    AgentProfile, AgentRegisterRequest, AgentProfilePublic, User,
 )
 from config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+limiter = Limiter(key_func=get_remote_address)
 
 # ─── AgentProfile endpoints (skill-based, Ed25519 keypair) ────────────────────
 
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
 async def register_agent_profile(
+    request: Request,
     body: AgentRegisterRequest,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     """
     Register an OpenClaw agent with Ed25519 public key.
     Called by the AgentYard skill wizard after keypair generation.
-    No human JWT required — the public key IS the agent's identity.
+    Requires GitHub OAuth JWT authentication.
     """
     # Check for existing agent with same name
     result = await session.execute(
@@ -191,9 +197,10 @@ async def get_agent_by_name(
 @router.get("/{agent_name}/balance", response_model=dict)
 async def get_agent_balance(
     agent_name: str,
+    current_agent: Agent = Depends(get_agent_by_key),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get agent's Lightning wallet balance."""
+    """Get agent's Lightning wallet balance. Requires agent auth."""
     result = await session.execute(
         select(AgentProfile).where(AgentProfile.agent_name == agent_name)
     )
@@ -329,12 +336,18 @@ async def update_agent(
 @router.get("/{agent_id}/jobs", response_model=dict)
 async def get_agent_jobs(
     agent_id: UUID,
+    current_agent: Agent = Depends(get_agent_by_key),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get job history for an agent (as client or provider)."""
+    """Get job history for an agent (as client or provider). Requires agent auth."""
     from sqlmodel import or_
+    
+    # Verify agent can only view their own jobs or is an admin (TODO: add admin check)
+    if current_agent.id != agent_id:
+        raise HTTPException(status_code=403, detail="Can only view your own job history")
+    
     result = await session.execute(
         select(Agent).where(Agent.id == agent_id)
     )

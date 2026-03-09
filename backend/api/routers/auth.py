@@ -5,6 +5,7 @@ Legacy email/password: POST /auth/register, POST /auth/login
 """
 import hashlib
 import secrets
+import time
 from datetime import datetime, timezone, timedelta
 
 import httpx
@@ -12,6 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from jose import jwt
 from passlib.context import CryptContext
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -20,8 +23,13 @@ from api.deps import get_current_human, get_current_user, hash_api_key
 from api.models import Human, HumanCreate, HumanPublic, User
 from config import settings
 
+limiter = Limiter(key_func=get_remote_address)
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth state storage (in-memory for MVP, can be Redis later)
+_oauth_states: dict[str, float] = {}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,26 +70,48 @@ def create_github_jwt(user: User) -> str:
 # ─── GitHub OAuth Routes ───────────────────────────────────────────────────────
 
 @router.get("/github", tags=["auth"])
-async def github_login():
+@limiter.limit("10/minute")
+async def github_login(request: Request):
     """Redirect to GitHub OAuth authorization page."""
+    # Generate and store OAuth state for CSRF prevention
+    state = secrets.token_urlsafe(32)
+    _oauth_states[state] = time.time()
+    
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"
         f"?client_id={settings.github_client_id}"
         f"&scope=read:user,user:email"
         f"&redirect_uri={settings.github_callback_url}"
+        f"&state={state}"
     )
     return RedirectResponse(github_auth_url)
 
 
 @router.get("/github/callback", tags=["auth"])
-async def github_callback(code: str, session: AsyncSession = Depends(get_session)):
+@limiter.limit("10/minute")
+async def github_callback(request: Request, code: str, state: str = None, session: AsyncSession = Depends(get_session)):
     """
     Handle GitHub OAuth callback.
-    1. Exchange code for access token
-    2. Fetch user profile from GitHub
-    3. Create or update User in DB
-    4. Issue JWT and redirect to frontend with token
+    1. Validate state parameter (CSRF prevention)
+    2. Exchange code for access token
+    3. Fetch user profile from GitHub
+    4. Create or update User in DB
+    5. Issue JWT and redirect to frontend with token
     """
+    # Validate state parameter
+    if not state or state not in _oauth_states:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    
+    # Clean up expired states (>10 min old)
+    now = time.time()
+    _oauth_states_copy = _oauth_states.copy()
+    for k, v in _oauth_states_copy.items():
+        if now - v > 600:
+            del _oauth_states[k]
+    
+    # Consume the state
+    del _oauth_states[state]
+    
     # Exchange code for GitHub access token
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
@@ -129,7 +159,7 @@ async def github_callback(code: str, session: AsyncSession = Depends(get_session
     result = await session.execute(select(User).where(User.github_id == github_id))
     user = result.scalar_one_or_none()
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if user:
         # Update existing user
         user.github_username = github_username
@@ -155,8 +185,8 @@ async def github_callback(code: str, session: AsyncSession = Depends(get_session
     # Issue JWT
     jwt_token = create_github_jwt(user)
 
-    # Redirect to frontend with token
-    redirect_url = f"{settings.frontend_url}/?token={jwt_token}"
+    # Redirect to frontend with token (use fragment instead of query param to prevent logging)
+    redirect_url = f"{settings.frontend_url}/#token={jwt_token}"
     return RedirectResponse(redirect_url)
 
 
@@ -186,7 +216,8 @@ async def logout():
 # ─── Legacy Email/Password Routes ─────────────────────────────────────────────
 
 @router.post("/register", response_model=HumanPublic, status_code=status.HTTP_201_CREATED)
-async def register(body: HumanCreate, session: AsyncSession = Depends(get_session)):
+@limiter.limit("3/minute")
+async def register(request: Request, body: HumanCreate, session: AsyncSession = Depends(get_session)):
     """Register a new human account (legacy email/password auth)."""
     result = await session.execute(select(Human).where(Human.email == body.email))
     existing = result.scalar_one_or_none()
@@ -204,7 +235,8 @@ async def register(body: HumanCreate, session: AsyncSession = Depends(get_sessio
 
 
 @router.post("/login")
-async def login(body: HumanCreate, session: AsyncSession = Depends(get_session)):
+@limiter.limit("5/minute")
+async def login(request: Request, body: HumanCreate, session: AsyncSession = Depends(get_session)):
     """Login and get JWT access token (legacy email/password auth)."""
     result = await session.execute(select(Human).where(Human.email == body.email))
     human = result.scalar_one_or_none()

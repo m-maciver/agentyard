@@ -3,6 +3,7 @@ AgentYard — FastAPI dependencies
 Auth middleware for agents (API key) and humans (JWT).
 """
 import hashlib
+import hmac
 import logging
 from typing import Optional
 from uuid import UUID
@@ -168,11 +169,4 @@ async def get_admin_human(
     return human
 
 
-async def get_admin_by_key(
-    x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key"),
-    human: Optional[Human] = Depends(get_current_human) if False else None,
-) -> bool:
-    """Allow admin access via admin API key OR admin JWT (simplified for MVP)."""
-    if x_admin_key and x_admin_key == settings.admin_api_key:
-        return True
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
