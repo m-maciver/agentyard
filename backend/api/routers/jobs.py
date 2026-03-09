@@ -46,11 +46,25 @@ async def create_job(
     )
     provider = result.scalar_one_or_none()
     if not provider:
-        raise HTTPException(status_code=404, detail="Provider agent not found or inactive")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "agent_not_found",
+                "message": f"Provider agent '{body.provider_agent_id}' not found or is inactive. Check the agent ID and try again.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     # Can't hire yourself
     if client_agent.id == provider.id:
-        raise HTTPException(status_code=400, detail="Cannot hire yourself")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "self_hire",
+                "message": "An agent cannot hire itself. Use a different agent as the client.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     price_sats = provider.price_per_task_sats
     platform_fee = calculate_platform_fee(price_sats, provider.reputation_score)
@@ -60,7 +74,11 @@ async def create_job(
     if price_sats > provider.max_job_sats:
         raise HTTPException(
             status_code=400,
-            detail=f"Job price {price_sats} sats exceeds provider's max job size {provider.max_job_sats} sats",
+            detail={
+                "error": "job_too_large",
+                "message": f"Job price {price_sats} sats exceeds provider's max job size of {provider.max_job_sats} sats. Contact the provider to increase their limit.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
         )
 
     # Create job record
@@ -97,7 +115,7 @@ async def create_job(
                 "stake_required_sats": stake_sats,
             },
             "status": job.status,
-            "warning": "LNBits not configured — invoice is a placeholder",
+            "warning": "Lightning payments not yet configured. This is a placeholder invoice. Real payments coming soon.",
         }
 
     return {
@@ -157,11 +175,25 @@ async def get_job(
     result = await session.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "job_not_found",
+                "message": f"Job '{job_id}' not found. Check the job ID and try again.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     # Only client or provider can view
     if job.client_agent_id != agent.id and job.provider_agent_id != agent.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "forbidden",
+                "message": "Access denied. Only the client or provider of this job can view it.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     return job
 
@@ -180,15 +212,33 @@ async def deliver_job(
     result = await session.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "job_not_found",
+                "message": f"Job '{job_id}' not found. Check the job ID and try again.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.provider_agent_id != agent.id:
-        raise HTTPException(status_code=403, detail="Only the provider can deliver this job")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "job_not_deliverable",
+                "message": "Only the assigned provider can deliver this job.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.status not in (JobStatus.IN_PROGRESS, JobStatus.ESCROWED):
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot deliver job in status '{job.status}'. Must be IN_PROGRESS or ESCROWED.",
+            detail={
+                "error": "job_not_deliverable",
+                "message": f"This job cannot be delivered. Current status: {job.status}. Job must be IN_PROGRESS or ESCROWED.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
         )
 
     now = datetime.now(timezone.utc)
@@ -233,27 +283,59 @@ async def complete_job(
     result = await session.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "job_not_found",
+                "message": f"Job '{job_id}' not found. Check the job ID and try again.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.client_agent_id != agent.id:
-        raise HTTPException(status_code=403, detail="Only the client can confirm delivery")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "job_not_acceptable",
+                "message": "Only the job poster (client) can confirm delivery.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.status != JobStatus.DELIVERED:
         raise HTTPException(
             status_code=400,
-            detail=f"Job is in status '{job.status}', not 'delivered'",
+            detail={
+                "error": "job_not_deliverable",
+                "message": f"This job cannot be completed. Current status: {job.status}. Job must be DELIVERED first.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
         )
 
     # Get provider
     provider_result = await session.execute(select(Agent).where(Agent.id == job.provider_agent_id))
     provider = provider_result.scalar_one_or_none()
     if not provider:
-        raise HTTPException(status_code=500, detail="Provider agent not found")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "provider_not_found",
+                "message": "Provider agent not found. Contact support: github.com/m-maciver/agentyard/issues",
+                "docs": "https://agentyard.xyz/docs#support",
+            },
+        )
 
     # Release escrow
     success = await escrow_service.release_escrow_to_provider(job, provider, session)
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to release escrow — please try again or contact support")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "escrow_release_failed",
+                "message": "Failed to release escrow. Please try again. If this persists, contact support: github.com/m-maciver/agentyard/issues",
+                "docs": "https://agentyard.xyz/docs#support",
+            },
+        )
 
     # Recalculate provider reputation (includes JSS recalculation + threshold enforcement)
     await recalculate_agent_reputation(provider, session)
@@ -281,22 +363,47 @@ async def accept_job_delivery(
     result = await session.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "job_not_found",
+                "message": f"Job '{job_id}' not found. Check the job ID and try again.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.client_agent_id != agent.id:
-        raise HTTPException(status_code=403, detail="Only the buyer can accept delivery")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "job_not_acceptable",
+                "message": "Only the job poster (buyer) can accept delivery.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.status != JobStatus.DELIVERED:
         raise HTTPException(
             status_code=400,
-            detail=f"Job is in status '{job.status}' — must be DELIVERED to accept",
+            detail={
+                "error": "job_not_deliverable",
+                "message": f"This job cannot be accepted. Current status: {job.status}. Job must be DELIVERED first.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
         )
 
     # Get provider
     provider_result = await session.execute(select(Agent).where(Agent.id == job.provider_agent_id))
     provider = provider_result.scalar_one_or_none()
     if not provider:
-        raise HTTPException(status_code=500, detail="Provider agent not found")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "provider_not_found",
+                "message": "Provider agent not found. Contact support: github.com/m-maciver/agentyard/issues",
+                "docs": "https://agentyard.xyz/docs#support",
+            },
+        )
 
     # Stamp acceptance before releasing (idempotency guard)
     now = datetime.now(timezone.utc)
@@ -308,7 +415,14 @@ async def accept_job_delivery(
     # Same release path as auto-release and complete endpoint
     success = await escrow_service.release_escrow_to_provider(job, provider, session)
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to release escrow — please try again or contact support")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "escrow_release_failed",
+                "message": "Failed to release escrow. Please try again. If this persists, contact support: github.com/m-maciver/agentyard/issues",
+                "docs": "https://agentyard.xyz/docs#support",
+            },
+        )
 
     await recalculate_agent_reputation(provider, session)
 
@@ -332,15 +446,33 @@ async def dispute_job(
     result = await session.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "job_not_found",
+                "message": f"Job '{job_id}' not found. Check the job ID and try again.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
 
     if job.client_agent_id != agent.id:
-        raise HTTPException(status_code=403, detail="Only the client can dispute this job")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "forbidden",
+                "message": "Only the client (buyer) can dispute this job.",
+                "docs": "https://agentyard.xyz/docs#disputes",
+            },
+        )
 
     if job.status != JobStatus.DELIVERED:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot dispute job in status '{job.status}'. Must be DELIVERED (within {settings.dispute_window_minutes}m window).",
+            detail={
+                "error": "job_not_disputable",
+                "message": f"Cannot dispute job in status '{job.status}'. Job must be DELIVERED and within the {settings.dispute_window_minutes}-minute dispute window.",
+                "docs": "https://agentyard.xyz/docs#disputes",
+            },
         )
 
     # Check still in dispute window
@@ -351,7 +483,11 @@ async def dispute_job(
     if auto_release and datetime.now(timezone.utc) >= auto_release:
         raise HTTPException(
             status_code=400,
-            detail="Dispute window has closed. Escrow has been auto-released.",
+            detail={
+                "error": "dispute_window_closed",
+                "message": f"The {settings.dispute_window_minutes}-minute dispute window has closed and escrow has been auto-released to the provider. Contact support for assistance: github.com/m-maciver/agentyard/issues",
+                "docs": "https://agentyard.xyz/docs#disputes",
+            },
         )
 
     job.status = JobStatus.DISPUTED

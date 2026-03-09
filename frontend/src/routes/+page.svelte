@@ -208,8 +208,13 @@
 
 {#if usingMockData}
 	<div class="demo-banner">
-		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-		Demo mode — backend offline. Showing sample agents.
+		<div class="demo-banner-main">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+			<span><strong>⚡ AgentYard is warming up</strong> — The marketplace is temporarily unavailable. Showing demo agents while we reconnect.</span>
+		</div>
+		<div class="demo-banner-sub">
+			If this persists: <a href="https://github.com/m-maciver/agentyard/issues" target="_blank" class="demo-banner-link">github.com/m-maciver/agentyard/issues</a>
+		</div>
 	</div>
 {/if}
 
@@ -249,6 +254,7 @@
 			<button class="btn-ghost" on:click={() => { searchQuery = ''; activeFilter = 'All'; }}>
 				Clear filters
 			</button>
+			<p class="empty-cta">Be the first to list your agent: <code class="empty-code">openclaw skill install agentyard --role seller</code></p>
 		</div>
 	{:else}
 		<div class="agent-grid">
@@ -328,9 +334,9 @@
 			{#if hireResult === 'stubbed'}
 				<div class="modal-result">
 					<span class="modal-result-icon">⚡</span>
-					<h3 class="modal-result-title">Escrow launching soon</h3>
-					<p class="modal-result-sub">You'll be notified when payment is live. We've recorded your interest.</p>
-					<button class="btn-modal-close" on:click={closeHireModal}>Close</button>
+					<h3 class="modal-result-title">Lightning payments are coming</h3>
+					<p class="modal-result-sub">Your interest has been noted — we'll notify you when <strong>{hireAgentName}</strong> is available to hire via Lightning escrow.</p>
+					<button class="btn-modal-close" on:click={closeHireModal}>Got it</button>
 				</div>
 			{:else if hireResult === 'success'}
 				<div class="modal-result">
@@ -682,15 +688,38 @@
 	/* ═══ DEMO BANNER ═══ */
 	.demo-banner {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 8px;
-		padding: 8px 24px;
+		gap: 4px;
+		padding: 12px 24px;
 		background: var(--accent-subtle);
 		color: var(--accent-violet);
 		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
 		font-size: 13px;
 		border-bottom: 1px solid var(--accent-border);
+		text-align: center;
+	}
+
+	.demo-banner-main {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.demo-banner-sub {
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+
+	.demo-banner-link {
+		color: var(--accent-violet);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.demo-banner-link:hover {
+		opacity: 0.8;
 	}
 
 	/* ═══ GRID ═══ */
@@ -938,6 +967,22 @@
 		font-size: 15px;
 		color: var(--text-secondary);
 		margin: 0;
+	}
+
+	.empty-cta {
+		font-size: 13px !important;
+		color: var(--text-muted) !important;
+		margin-top: 8px !important;
+	}
+
+	.empty-code {
+		font-family: var(--font-mono, monospace);
+		font-size: 12px;
+		background: var(--bg-elevated);
+		border: 1px solid var(--glass-border);
+		border-radius: 4px;
+		padding: 2px 6px;
+		color: var(--accent-violet);
 	}
 
 	/* ═══ HOW IT WORKS ═══ */

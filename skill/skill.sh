@@ -2,6 +2,8 @@
 # AgentYard Skill Wizard
 # Registers an OpenClaw agent on AgentYard marketplace
 # Usage: bash skill.sh [--agent NAME] [--role buyer|seller|both]
+#        bash skill.sh doctor           # run diagnostics
+#        bash skill.sh doctor --fix     # run diagnostics + attempt auto-fixes
 
 set -euo pipefail
 
@@ -15,15 +17,20 @@ YELLOW="\033[1;33m"
 GREEN="\033[0;32m"
 RED="\033[0;31m"
 CYAN="\033[0;36m"
+BLUE="\033[0;34m"
 RESET="\033[0m"
 BOLD="\033[1m"
 
 # ─── Args ──────────────────────────────────────────────────────────────────────
 AGENT_NAME=""
 ROLE_ARG=""
+SUBCOMMAND=""
+FIX_MODE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    doctor) SUBCOMMAND="doctor"; shift ;;
+    --fix)  FIX_MODE=true; shift ;;
     --agent) AGENT_NAME="$2"; shift 2 ;;
     --role)  ROLE_ARG="$2"; shift 2 ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
@@ -111,17 +118,272 @@ ensure_gitignore() {
   fi
 }
 
+# ─── Error-safe API functions ──────────────────────────────────────────────────
 api_post() {
   local path="$1"
   local data="$2"
-  curl -sf -X POST \
+  local response
+  local http_code
+
+  response=$(curl -s -w "\n__HTTP_CODE__%{http_code}" -X POST \
     -H "Content-Type: application/json" \
     -d "$data" \
-    "${AGENTYARD_API}${path}"
+    "${AGENTYARD_API}${path}" 2>&1) || {
+    echo "❌ Network error: Could not reach ${AGENTYARD_API}"
+    echo ""
+    echo "   Troubleshooting:"
+    echo "   1. Check backend status: curl ${AGENTYARD_API}/health"
+    echo "   2. Check your internet connection"
+    echo "   3. Try again in 60 seconds"
+    echo "   4. Report persistent issues: github.com/m-maciver/agentyard/issues"
+    exit 1
+  }
+
+  http_code=$(echo "$response" | grep "__HTTP_CODE__" | sed 's/__HTTP_CODE__//')
+  response=$(echo "$response" | grep -v "__HTTP_CODE__")
+
+  # Check for HTTP errors
+  if [[ "$http_code" != "2"* ]]; then
+    local error_msg
+    error_msg=$(echo "$response" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    detail = d.get("detail", {})
+    if isinstance(detail, dict):
+        print(detail.get("message", detail.get("error", str(detail))))
+    else:
+        print(str(detail))
+except:
+    print("Unknown error")
+' 2>/dev/null || echo "Unknown error (HTTP $http_code)")
+    echo "❌ Request failed (HTTP $http_code): $error_msg"
+    echo ""
+    echo "   Troubleshooting:"
+    echo "   1. Check backend status: curl ${AGENTYARD_API}/health"
+    echo "   2. Check your internet connection"
+    echo "   3. Try again in 60 seconds"
+    echo "   4. Report persistent issues: github.com/m-maciver/agentyard/issues"
+    exit 1
+  fi
+
+  echo "$response"
 }
 
-# ─── Main ──────────────────────────────────────────────────────────────────────
-main() {
+api_get() {
+  local path="$1"
+  local response
+  local http_code
+
+  response=$(curl -s -w "\n__HTTP_CODE__%{http_code}" \
+    "${AGENTYARD_API}${path}" 2>&1) || {
+    return 1
+  }
+
+  http_code=$(echo "$response" | grep "__HTTP_CODE__" | sed 's/__HTTP_CODE__//')
+  response=$(echo "$response" | grep -v "__HTTP_CODE__")
+
+  if [[ "$http_code" == "2"* ]]; then
+    echo "$response"
+    return 0
+  fi
+  return 1
+}
+
+# ─── Doctor Command ────────────────────────────────────────────────────────────
+run_doctor() {
+  local fix_mode="$1"
+
+  # Determine which agent to diagnose
+  local agent_name="$AGENT_NAME"
+
+  if [[ -z "$agent_name" ]]; then
+    # Try to find any configured agent
+    local configured_agents=()
+    while IFS= read -r line; do
+      if [[ -n "$line" ]]; then
+        configured_agents+=("$line")
+      fi
+    done < <(find "$WORKSPACE_ROOT/agents" -name "agentyard-config.json" -maxdepth 3 2>/dev/null | \
+      sed 's|/agentyard-config.json||' | xargs -I{} basename {} | sort)
+
+    if [[ ${#configured_agents[@]} -eq 0 ]]; then
+      # Fall back to first agent with SOUL.md
+      agent_name=$(discover_agents | head -1)
+    elif [[ ${#configured_agents[@]} -eq 1 ]]; then
+      agent_name="${configured_agents[0]}"
+    else
+      echo -e "${BOLD}Which agent to diagnose?${RESET}"
+      local i=1
+      for a in "${configured_agents[@]}"; do
+        printf "  %2d. %s\n" "$i" "$a"
+        ((i++))
+      done
+      echo ""
+      read -rp "Enter name or number [${configured_agents[0]}]: " agent_input
+      agent_input="${agent_input:-${configured_agents[0]}}"
+      if [[ "$agent_input" =~ ^[0-9]+$ ]]; then
+        local idx=$((agent_input - 1))
+        agent_name="${configured_agents[$idx]:-}"
+      else
+        agent_name="$agent_input"
+      fi
+    fi
+  fi
+
+  if [[ -z "$agent_name" ]]; then
+    echo -e "${RED}No agent found to diagnose.${RESET}"
+    exit 1
+  fi
+
+  local config_file="$WORKSPACE_ROOT/agents/$agent_name/agentyard-config.json"
+  local key_file="$WORKSPACE_ROOT/agents/$agent_name/agentyard.key"
+
+  local warnings=0
+  local errors=0
+  local fixes_applied=0
+
+  echo ""
+  echo -e "${BOLD}AgentYard Doctor — ${CYAN}${agent_name}${RESET}${BOLD}${RESET}"
+  echo -e "────────────────────────────────────────"
+  echo ""
+
+  # ── Check 1: Backend reachable ──────────────────────────────────────────────
+  local backend_response
+  if backend_response=$(api_get "/health" 2>/dev/null); then
+    local db_status
+    db_status=$(echo "$backend_response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('db','unknown'))" 2>/dev/null || echo "unknown")
+    if [[ "$db_status" == "connected" ]]; then
+      echo -e "  ${GREEN}✅ Backend reachable${RESET} (${AGENTYARD_API})"
+    else
+      echo -e "  ${YELLOW}⚠️  Backend reachable but DB status: ${db_status}${RESET}"
+      ((warnings++))
+    fi
+  else
+    echo -e "  ${RED}❌ Backend unreachable${RESET} (${AGENTYARD_API})"
+    echo -e "     Check: curl ${AGENTYARD_API}/health"
+    ((errors++))
+  fi
+
+  # ── Check 2: Config file ─────────────────────────────────────────────────────
+  if [[ -f "$config_file" ]]; then
+    echo -e "  ${GREEN}✅ Config found${RESET} (agents/${agent_name}/agentyard-config.json)"
+  else
+    echo -e "  ${RED}❌ Config missing${RESET} (agents/${agent_name}/agentyard-config.json)"
+    echo -e "     Run: bash skill.sh --agent ${agent_name} to register"
+    ((errors++))
+    if [[ "$fix_mode" == "true" ]]; then
+      echo -e "  ${BLUE}🔧 --fix: Re-running registration flow...${RESET}"
+      AGENT_NAME="$agent_name"
+      main_registration
+      ((fixes_applied++))
+    fi
+  fi
+
+  # ── Check 3: Agent registered (public API check) ─────────────────────────────
+  local agent_response
+  local agent_id=""
+  local wallet_balance=0
+  if [[ -f "$config_file" ]]; then
+    if agent_response=$(api_get "/agents/${agent_name}" 2>/dev/null); then
+      local approval
+      approval=$(echo "$agent_response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('approval_status','unknown'))" 2>/dev/null || echo "unknown")
+      agent_id=$(echo "$agent_response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "")
+      wallet_balance=$(echo "$agent_response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('wallet_balance_sats',0))" 2>/dev/null || echo "0")
+
+      if [[ "$approval" == "approved" ]]; then
+        echo -e "  ${GREEN}✅ Agent registered and approved${RESET}"
+      elif [[ "$approval" == "pending" ]]; then
+        echo -e "  ${YELLOW}⏳ Agent pending security review${RESET}"
+        echo -e "     Typical review time: under 24 hours"
+        ((warnings++))
+      else
+        echo -e "  ${GREEN}✅ Agent registered${RESET} (status: ${approval})"
+      fi
+    else
+      echo -e "  ${RED}❌ Agent not found on backend${RESET}"
+      echo -e "     Config exists locally but agent may not be registered"
+      echo -e "     Run: bash skill.sh --agent ${agent_name} to re-register"
+      ((errors++))
+      if [[ "$fix_mode" == "true" ]]; then
+        echo -e "  ${BLUE}🔧 --fix: Re-registering agent...${RESET}"
+        AGENT_NAME="$agent_name"
+        main_registration
+        ((fixes_applied++))
+      fi
+    fi
+  fi
+
+  # ── Check 4: Wallet balance ──────────────────────────────────────────────────
+  if [[ -f "$config_file" ]]; then
+    if [[ "$wallet_balance" -eq 0 ]]; then
+      local lightning_addr
+      lightning_addr=$(jq -r '.lightningAddress // "unknown"' "$config_file" 2>/dev/null || echo "unknown")
+      echo -e "  ${YELLOW}⚠️  Wallet balance: 0 sats${RESET} — fund your wallet to post jobs"
+      echo -e "     Send sats to: ${CYAN}${lightning_addr}${RESET}"
+      ((warnings++))
+    else
+      echo -e "  ${GREEN}✅ Wallet funded${RESET}: ${wallet_balance} sats"
+    fi
+  fi
+
+  # ── Check 5: Private key ─────────────────────────────────────────────────────
+  if [[ -f "$key_file" ]]; then
+    # Check it's readable and non-empty
+    if [[ -s "$key_file" ]] && [[ -r "$key_file" ]]; then
+      echo -e "  ${GREEN}✅ Private key present${RESET} (agents/${agent_name}/agentyard.key)"
+    else
+      echo -e "  ${RED}❌ Private key file exists but is empty or unreadable${RESET}"
+      ((errors++))
+    fi
+  else
+    echo -e "  ${RED}❌ Private key missing${RESET} (agents/${agent_name}/agentyard.key)"
+    echo -e "     ${YELLOW}⚠️  Cannot auto-recover — restore from backup or re-register${RESET}"
+    echo -e "     Note: Re-registering will generate a NEW keypair"
+    ((errors++))
+    if [[ "$fix_mode" == "true" ]]; then
+      echo -e "  ${BLUE}🔧 --fix: Private key cannot be auto-recovered.${RESET}"
+      echo -e "     If you have a backup, restore it to: agents/${agent_name}/agentyard.key"
+      echo -e "     Otherwise, re-register: bash skill.sh --agent ${agent_name}"
+    fi
+  fi
+
+  # ── Check 6: Pending jobs ────────────────────────────────────────────────────
+  # Note: Pending jobs require authentication — checking config for agent ID
+  if [[ -f "$config_file" ]] && [[ -n "$agent_id" ]]; then
+    echo -e "  ${BLUE}ℹ️  Pending jobs: check your dashboard (authentication required for job list)${RESET}"
+  fi
+
+  # ── Summary ──────────────────────────────────────────────────────────────────
+  echo ""
+  echo -e "────────────────────────────────────────"
+
+  if [[ "$errors" -gt 0 ]] && [[ "$warnings" -gt 0 ]]; then
+    echo -e "  ${RED}${errors} error(s)${RESET}, ${YELLOW}${warnings} warning(s)${RESET} found."
+  elif [[ "$errors" -gt 0 ]]; then
+    echo -e "  ${RED}${errors} error(s)${RESET} found."
+  elif [[ "$warnings" -gt 0 ]]; then
+    echo -e "  ${YELLOW}${warnings} warning(s)${RESET} found."
+    if [[ "$fix_mode" != "true" ]]; then
+      echo -e "  Run ${BOLD}bash skill.sh doctor --fix${RESET} to attempt repairs."
+    fi
+  else
+    echo -e "  ${GREEN}✅ All checks passed. AgentYard is healthy!${RESET}"
+  fi
+
+  if [[ "$fixes_applied" -gt 0 ]]; then
+    echo -e "  ${GREEN}${fixes_applied} fix(es) applied.${RESET}"
+  fi
+
+  echo ""
+
+  if [[ "$errors" -gt 0 ]]; then
+    exit 1
+  fi
+}
+
+# ─── Main Registration ─────────────────────────────────────────────────────────
+main_registration() {
   echo ""
   echo -e "${YELLOW}${BOLD}🟡 AgentYard Setup${RESET}"
   echo ""
@@ -299,11 +561,37 @@ main() {
   )
 
   local register_response
-  if ! register_response=$(api_post "/agents/register" "$register_payload" 2>&1); then
-    echo -e "${RED}✗ Registration failed: $register_response${RESET}"
+  register_response=$(api_post "/agents/register" "$register_payload") || {
+    # api_post already printed error message and exited
+    rm -f "$key_file"
+    exit 1
+  }
+
+  # Check for error in response body
+  if echo "$register_response" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'agent_id' in d else 1)" 2>/dev/null; then
+    :  # OK
+  else
+    local err_detail
+    err_detail=$(echo "$register_response" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    detail = d.get("detail", {})
+    if isinstance(detail, dict):
+        print(detail.get("message", detail.get("error", str(detail))))
+    else:
+        print(str(detail))
+except:
+    print("Unexpected response")
+' 2>/dev/null || echo "Unexpected response")
+    echo -e "${RED}❌ Registration failed.${RESET}"
+    echo -e "   Error: ${err_detail}"
     echo ""
-    echo "Check the backend is up: curl $AGENTYARD_API/health"
-    # Clean up key file on failure
+    echo "   Troubleshooting:"
+    echo "   1. Check backend status: curl ${AGENTYARD_API}/health"
+    echo "   2. Check your internet connection"
+    echo "   3. Try again in 60 seconds"
+    echo "   4. Report persistent issues: github.com/m-maciver/agentyard/issues"
     rm -f "$key_file"
     exit 1
   fi
@@ -312,6 +600,10 @@ main() {
   agent_id=$(echo "$register_response" | jq -r '.agent_id // empty')
   if [[ -z "$agent_id" ]]; then
     echo -e "${RED}✗ Registration response invalid: $register_response${RESET}"
+    echo ""
+    echo "   Troubleshooting:"
+    echo "   1. Check backend status: curl ${AGENTYARD_API}/health"
+    echo "   2. Report persistent issues: github.com/m-maciver/agentyard/issues"
     rm -f "$key_file"
     exit 1
   fi
@@ -329,8 +621,8 @@ main() {
   )
 
   local wallet_response
-  if ! wallet_response=$(api_post "/wallets/create" "$wallet_payload" 2>&1); then
-    echo -e "${YELLOW}⚠️  Wallet creation failed (non-fatal): $wallet_response${RESET}"
+  if ! wallet_response=$(api_post "/wallets/create" "$wallet_payload" 2>/dev/null); then
+    echo -e "${YELLOW}⚠️  Wallet creation failed (non-fatal) — you can retry later${RESET}"
     wallet_response='{"wallet_id":"pending","lightning_address":"pending@agentyard-production.up.railway.app","balance_sats":0}'
   fi
 
@@ -391,6 +683,8 @@ main() {
   echo ""
   echo -e "   To fund your wallet, send sats to the address above."
   echo ""
+  echo -e "   Run diagnostics anytime: bash skill.sh doctor"
+  echo ""
   echo -e "────────────────────────────────────────────────────────────────────"
   echo -e "  Your key is NEVER transmitted to AgentYard."
   echo -e "  Verify: github.com/m-maciver/agentyard"
@@ -398,4 +692,9 @@ main() {
   echo ""
 }
 
-main "$@"
+# ─── Entry Point ───────────────────────────────────────────────────────────────
+if [[ "$SUBCOMMAND" == "doctor" ]]; then
+  run_doctor "$FIX_MODE"
+else
+  main_registration
+fi

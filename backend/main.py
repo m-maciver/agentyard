@@ -121,6 +121,100 @@ async def health():
     return JSONResponse(content=payload, status_code=status_code)
 
 
+@app.get("/health/diagnose", tags=["system"])
+async def health_diagnose():
+    """
+    Detailed diagnostic check — returns system status including DB, Lightning, agent stats,
+    and active jobs. Useful for debugging and the `agentyard doctor` command.
+    """
+    from sqlalchemy import text, func
+    from sqlalchemy.exc import SQLAlchemyError
+    from fastapi.responses import JSONResponse
+    from datetime import datetime, timezone, timedelta
+    from api.database import get_session
+    from api.models import AgentProfile, Job, JobStatus
+
+    checks = {}
+    warnings = []
+    now = datetime.now(timezone.utc)
+    timestamp = now.isoformat()
+
+    # ── Database ──────────────────────────────────────────────────────────────
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        checks["database"] = "connected"
+    except SQLAlchemyError as e:
+        logger.error("Diagnose: DB ping failed: %s", e)
+        checks["database"] = "error"
+        warnings.append("Database unreachable — API will fail for most requests")
+
+    # ── Lightning ─────────────────────────────────────────────────────────────
+    lightning_stub = os.environ.get("LIGHTNING_STUB", "").lower() in ("true", "1") or \
+        settings.lnbits_url in ("stub", "", "https://demo.lnbits.com")
+    if lightning_stub:
+        checks["lightning"] = "stub_mode"
+        warnings.append("Lightning in stub mode — real payments disabled")
+    else:
+        checks["lightning"] = "live"
+
+    # ── Agent + Job stats (if DB is up) ──────────────────────────────────────
+    if checks["database"] == "connected":
+        try:
+            from sqlalchemy.ext.asyncio import AsyncSession
+            async with AsyncSession(engine) as session:
+                # Total registered agents
+                result = await session.execute(
+                    text("SELECT COUNT(*) FROM agentprofile WHERE is_active = 1 OR is_active = TRUE")
+                )
+                checks["agents_registered"] = result.scalar_one_or_none() or 0
+
+                # Protection pool
+                from api.utils.platform_stats import get_pool_balance
+                try:
+                    checks["protection_pool_sats"] = get_pool_balance()
+                except Exception:
+                    checks["protection_pool_sats"] = 0
+
+                # Active jobs (in_progress + escrowed + delivered)
+                active_statuses = ("in_progress", "escrowed", "delivered", "disputed")
+                status_placeholders = ", ".join(f"'{s}'" for s in active_statuses)
+                result = await session.execute(
+                    text(f"SELECT COUNT(*) FROM job WHERE status IN ({status_placeholders})")
+                )
+                checks["jobs_active"] = result.scalar_one_or_none() or 0
+
+                # Jobs completed in last 24h
+                cutoff = (now - timedelta(hours=24)).isoformat()
+                result = await session.execute(
+                    text(f"SELECT COUNT(*) FROM job WHERE status = 'completed' AND completed_at >= '{cutoff}'")
+                )
+                checks["jobs_completed_24h"] = result.scalar_one_or_none() or 0
+
+        except Exception as e:
+            logger.warning("Diagnose: stats query failed: %s", e)
+            checks["agents_registered"] = "unavailable"
+            checks["jobs_active"] = "unavailable"
+            checks["jobs_completed_24h"] = "unavailable"
+    else:
+        checks["agents_registered"] = "unavailable"
+        checks["protection_pool_sats"] = "unavailable"
+        checks["jobs_active"] = "unavailable"
+        checks["jobs_completed_24h"] = "unavailable"
+
+    overall_status = "ok" if not any(v == "error" for v in checks.values()) else "degraded"
+
+    payload = {
+        "status": overall_status,
+        "timestamp": timestamp,
+        "version": "0.1.0",
+        "checks": checks,
+        "warnings": warnings,
+    }
+    http_status = 200 if overall_status == "ok" else 503
+    return JSONResponse(content=payload, status_code=http_status)
+
+
 @app.get("/", tags=["system"])
 async def root():
     """Root redirect to docs."""

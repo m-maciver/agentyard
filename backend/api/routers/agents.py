@@ -55,7 +55,11 @@ async def register_agent_profile(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Agent '{body.agent_name}' is already registered",
+            detail={
+                "error": "agent_already_registered",
+                "message": f"Agent '{body.agent_name}' is already registered. To re-register, delete the existing config and run: openclaw skill install agentyard",
+                "docs": "https://agentyard.xyz/docs#registration",
+            },
         )
 
     # Validate role
@@ -63,7 +67,11 @@ async def register_agent_profile(
     if body.role not in valid_roles:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}",
+            detail={
+                "error": "invalid_role",
+                "message": f"Invalid role '{body.role}'. Must be one of: {', '.join(valid_roles)}",
+                "docs": "https://agentyard.xyz/docs#roles",
+            },
         )
 
     profile = AgentProfile(
@@ -149,7 +157,14 @@ async def get_agent(agent_id: UUID, session: AsyncSession = Depends(get_session)
     result = await session.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "agent_not_found",
+                "message": f"Agent with ID '{agent_id}' not found. Check the ID or run: openclaw skill install agentyard",
+                "docs": "https://agentyard.xyz/docs#agents",
+            },
+        )
     return agent
 
 
@@ -167,7 +182,14 @@ async def get_agent_by_name(
         re.IGNORECASE,
     )
     if UUID_PATTERN.match(agent_name):
-        raise HTTPException(status_code=404, detail="Use /agents/{uuid} for legacy agents")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "use_uuid_endpoint",
+                "message": "This looks like a UUID. Use /agents/{uuid} for legacy agent lookups.",
+                "docs": "https://agentyard.xyz/docs#agents",
+            },
+        )
 
     # Search both AgentProfile and Agent tables
     # First try AgentProfile (skill-registered)
@@ -184,15 +206,23 @@ async def get_agent_by_name(
     )
     agent = agent_result.scalar_one_or_none()
     if agent:
-        # Convert Agent to AgentProfilePublic-compatible response
-        # For now, return 404 since Agent doesn't match AgentProfile schema
-        # But client can use the UUID endpoint instead
         raise HTTPException(
             status_code=404,
-            detail=f"Agent '{agent_name}' found but use /agents/{agent.id} (UUID endpoint) to fetch JWT-registered agents"
+            detail={
+                "error": "use_uuid_endpoint",
+                "message": f"Agent '{agent_name}' is a legacy agent. Use /agents/{agent.id} to fetch its profile.",
+                "docs": "https://agentyard.xyz/docs#agents",
+            },
         )
     
-    raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+    raise HTTPException(
+        status_code=404,
+        detail={
+            "error": "agent_not_found",
+            "message": f"Agent '{agent_name}' is not registered. Run: openclaw skill install agentyard",
+            "docs": "https://agentyard.xyz/docs#registration",
+        },
+    )
 
 
 @router.get("/{agent_name}/balance", response_model=dict)
@@ -207,7 +237,14 @@ async def get_agent_balance(
     )
     profile = result.scalar_one_or_none()
     if not profile:
-        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "agent_not_found",
+                "message": f"Agent '{agent_name}' is not registered. Run: openclaw skill install agentyard",
+                "docs": "https://agentyard.xyz/docs#registration",
+            },
+        )
 
     # Stub mode or no wallet yet
     lightning_stub = os.environ.get("LIGHTNING_STUB", "").lower() in ("true", "1") or \
@@ -316,12 +353,26 @@ async def update_agent(
 ):
     """Update own agent profile. Agent API key auth required."""
     if current_agent.id != agent_id:
-        raise HTTPException(status_code=403, detail="Can only update your own agent")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "forbidden",
+                "message": "You can only update your own agent profile.",
+                "docs": "https://agentyard.xyz/docs#agents",
+            },
+        )
 
     result = await session.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "agent_not_found",
+                "message": f"Agent with ID '{agent_id}' not found.",
+                "docs": "https://agentyard.xyz/docs#agents",
+            },
+        )
 
     update_data = body.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -347,14 +398,28 @@ async def get_agent_jobs(
     
     # Verify agent can only view their own jobs or is an admin (TODO: add admin check)
     if current_agent.id != agent_id:
-        raise HTTPException(status_code=403, detail="Can only view your own job history")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "forbidden",
+                "message": "You can only view your own job history. Check the agent ID in your request.",
+                "docs": "https://agentyard.xyz/docs#jobs",
+            },
+        )
     
     result = await session.execute(
         select(Agent).where(Agent.id == agent_id)
     )
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "agent_not_found",
+                "message": f"Agent with ID '{agent_id}' not found.",
+                "docs": "https://agentyard.xyz/docs#agents",
+            },
+        )
 
     jobs_result = await session.execute(
         select(Job)
