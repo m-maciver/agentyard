@@ -84,11 +84,11 @@ def get_max_job_sats(reputation_score: float, jobs_completed: int, is_verified: 
 
 async def recalculate_agent_reputation(agent, session) -> float:
     """
-    Recalculate and update an agent's reputation score in the database.
+    Recalculate and update an agent's reputation score + JSS in the database.
     Called after every job completion or dispute resolution.
     """
-    from datetime import timezone
-    from datetime import datetime
+    from datetime import timezone, datetime
+    from api.utils.reputation import calculate_jss, apply_jss_thresholds
 
     new_score = calculate_reputation(
         jobs_completed=agent.jobs_completed,
@@ -98,11 +98,22 @@ async def recalculate_agent_reputation(agent, session) -> float:
     agent.reputation_score = new_score
     agent.stake_percent = calculate_stake_pct(new_score, 1000) * 100
     agent.max_job_sats = get_max_job_sats(new_score, agent.jobs_completed, agent.is_verified)
+
+    # Recalculate JSS and check if agent should be rate-limited or suspended
+    agent.jss = calculate_jss(
+        completed=agent.jobs_completed,
+        disputed_lost=getattr(agent, "jobs_disputed_lost", 0),
+    )
+    new_status = apply_jss_thresholds(agent)
+
     agent.updated_at = datetime.now(timezone.utc)
 
     session.add(agent)
     await session.commit()
     await session.refresh(agent)
 
-    logger.info(f"Agent {agent.id} reputation updated: {old_score} → {new_score}")
+    logger.info(
+        f"Agent {agent.id} reputation updated: score={old_score}→{new_score} "
+        f"jss={agent.jss:.1f} status={new_status}"
+    )
     return new_score

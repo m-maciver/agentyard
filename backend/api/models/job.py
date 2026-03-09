@@ -59,6 +59,10 @@ class Job(SQLModel, table=True):
     completed_at: Optional[datetime] = Field(default=None)
     disputed_at: Optional[datetime] = Field(default=None)
 
+    # Set when buyer explicitly accepts — enables instant release vs waiting for the window
+    accepted_at: Optional[datetime] = Field(default=None)
+    accepted_by: Optional[str] = Field(default=None)  # user/agent id of buyer who accepted
+
     # Dispute
     dispute_reason: Optional[str] = Field(default=None)
     dispute_resolved_by: Optional[str] = Field(default=None)
@@ -95,6 +99,8 @@ class JobPublic(SQLModel):
     completed_at: Optional[datetime]
     disputed_at: Optional[datetime]
     dispute_reason: Optional[str]
+    accepted_at: Optional[datetime] = None
+    accepted_by: Optional[str] = None
 
 
 class JobDeliverRequest(SQLModel):

@@ -22,6 +22,8 @@ from api.models import (
 from api.services import escrow as escrow_service
 from api.services.delivery import deliver_via_webhook, notify_provider, notify_admin_dispute
 from api.services.reputation import calculate_platform_fee, calculate_stake_sats, recalculate_agent_reputation
+from api.utils.platform_stats import contribute_to_pool
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +196,8 @@ async def deliver_job(
     job.output_url = body.output_url
     job.status = JobStatus.DELIVERED
     job.delivered_at = now
-    job.auto_release_at = now + timedelta(hours=2)
+    # Dispute window — buyer has this long to raise a dispute before funds auto-release
+    job.auto_release_at = now + timedelta(minutes=settings.dispute_window_minutes)
 
     session.add(job)
     await session.commit()
@@ -252,11 +255,70 @@ async def complete_job(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to release escrow — please try again or contact support")
 
-    # Recalculate provider reputation
+    # Recalculate provider reputation (includes JSS recalculation + threshold enforcement)
     await recalculate_agent_reputation(provider, session)
+
+    # Feed 2% of platform fee into buyer protection pool
+    try:
+        contribute_to_pool(job.platform_fee_sats)
+    except Exception as e:
+        logger.warning(f"Failed to update protection pool for job {job.id}: {e}")
 
     await session.refresh(job)
     return job
+
+
+@router.put("/{job_id}/accept", response_model=dict)
+async def accept_job_delivery(
+    job_id: UUID,
+    agent: Agent = Depends(get_agent_by_key),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Buyer explicitly accepts delivery — releases sats immediately.
+    Skips the dispute window entirely. Use when you're happy and want to pay now.
+    """
+    result = await session.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.client_agent_id != agent.id:
+        raise HTTPException(status_code=403, detail="Only the buyer can accept delivery")
+
+    if job.status != JobStatus.DELIVERED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job is in status '{job.status}' — must be DELIVERED to accept",
+        )
+
+    # Get provider
+    provider_result = await session.execute(select(Agent).where(Agent.id == job.provider_agent_id))
+    provider = provider_result.scalar_one_or_none()
+    if not provider:
+        raise HTTPException(status_code=500, detail="Provider agent not found")
+
+    # Stamp acceptance before releasing (idempotency guard)
+    now = datetime.now(timezone.utc)
+    job.accepted_at = now
+    job.accepted_by = str(agent.id)
+    session.add(job)
+    await session.commit()
+
+    # Same release path as auto-release and complete endpoint
+    success = await escrow_service.release_escrow_to_provider(job, provider, session)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to release escrow — please try again or contact support")
+
+    await recalculate_agent_reputation(provider, session)
+
+    try:
+        contribute_to_pool(job.platform_fee_sats)
+    except Exception as e:
+        logger.warning(f"Failed to update protection pool for job {job.id}: {e}")
+
+    await session.refresh(job)
+    return {"status": "completed", "message": "Payment released to provider", "job_id": str(job.id)}
 
 
 @router.post("/{job_id}/dispute", response_model=JobPublic)
@@ -278,7 +340,7 @@ async def dispute_job(
     if job.status != JobStatus.DELIVERED:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot dispute job in status '{job.status}'. Must be DELIVERED (within 2h window).",
+            detail=f"Cannot dispute job in status '{job.status}'. Must be DELIVERED (within {settings.dispute_window_minutes}m window).",
         )
 
     # Check still in dispute window

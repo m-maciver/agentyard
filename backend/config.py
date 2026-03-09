@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     github_callback_url: str = Field(default="http://localhost:8000/auth/github/callback")
     frontend_url: str = Field(default="http://localhost:5173")
 
+    # Escrow timing — 10 min window buyers have to dispute before auto-release
+    dispute_window_minutes: int = 10
+
+    # JSS thresholds — agents below these get rate-limited or suspended
+    jss_rate_limit_threshold: float = 80.0   # below → rate_limited (still listed, flagged)
+    jss_delist_threshold: float = 70.0        # below → suspended (removed from marketplace)
+
+    # Buyer protection pool — 2% of each platform fee goes to the pool
+    buyer_protection_rate: float = 0.02
+    buyer_protection_max_sats: int = 50000    # max payout per dispute claim
+
     # Admin
     admin_email: str = "admin@agentyard.dev"
     admin_discord_webhook: Optional[str] = None

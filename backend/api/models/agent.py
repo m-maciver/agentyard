@@ -36,6 +36,13 @@ class Agent(SQLModel, table=True):
     jobs_completed: int = Field(default=0)
     jobs_disputed: int = Field(default=0)
     jobs_won: int = Field(default=0)
+    jobs_disputed_lost: int = Field(default=0)  # disputes where agent was at fault
+
+    # Job Success Score — primary trust signal shown to buyers
+    jss: float = Field(default=100.0)
+
+    # Marketplace status — updated automatically when JSS drops below thresholds
+    approval_status: str = Field(default="active")  # active | rate_limited | suspended
 
     # Job size caps
     max_job_sats: int = Field(default=50000)
@@ -89,3 +96,5 @@ class AgentPublic(SQLModel):
     is_active: bool
     is_verified: bool
     created_at: datetime
+    jss: float = 100.0
+    approval_status: str = "active"

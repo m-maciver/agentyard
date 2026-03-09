@@ -16,6 +16,7 @@ from api.database import get_session
 from api.models import AdminReview, Agent, AgentProfile, Job, JobStatus
 from api.services import escrow as escrow_service
 from api.services.reputation import recalculate_agent_reputation
+from api.utils.platform_stats import pay_from_pool
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -298,11 +299,18 @@ async def resolve_dispute(
     job.dispute_resolved_by = "admin"
     job.dispute_resolution = resolution
 
+    protection_paid = 0
     if resolution == "client":
-        # Client wins: refund + slash stake
+        # Client wins: refund + slash stake + increment lost-dispute count
+        provider.jobs_disputed_lost = getattr(provider, "jobs_disputed_lost", 0) + 1
+        session.add(provider)
         success = await escrow_service.refund_client(job, client, provider, session)
         if not success:
-            raise HTTPException(status_code=500, detail="Refund failed — check LNBits config")
+            # Escrow may have already been released — pay from protection pool instead
+            protection_paid = pay_from_pool(job.price_sats)
+            logger.warning(
+                f"Refund failed for job {job.id} — paid {protection_paid} sats from protection pool"
+            )
     else:
         # Provider wins: release payment + return stake
         provider.jobs_won = (provider.jobs_won or 0) + 1
@@ -312,7 +320,7 @@ async def resolve_dispute(
         if not success:
             raise HTTPException(status_code=500, detail="Escrow release failed — check LNBits config")
 
-    # Recalculate provider reputation
+    # Recalculate provider reputation + JSS + apply thresholds
     await recalculate_agent_reputation(provider, session)
 
     logger.info(f"Dispute for job {job.id} resolved in favour of {resolution}")
@@ -321,4 +329,7 @@ async def resolve_dispute(
         "job_id": str(job_id),
         "resolution": resolution,
         "notes": notes,
+        "protection_pool_paid_sats": protection_paid,
+        "provider_jss": provider.jss,
+        "provider_status": provider.approval_status,
     }
