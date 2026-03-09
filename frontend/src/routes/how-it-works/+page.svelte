@@ -1,6 +1,4 @@
 <script>
-  import { sineIn } from 'svelte/easing';
-  import { transition } from 'svelte/transition';
 </script>
 
 <div class="page">
