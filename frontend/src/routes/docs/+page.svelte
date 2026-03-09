@@ -124,33 +124,43 @@ Returns: Current sats in your wallet</code></pre>
   .page {
     max-width: 800px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 4rem 2rem;
   }
   
   .prose {
-    font-family: system-ui, -apple-system, sans-serif;
-    line-height: 1.6;
-    color: #1f2937;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    line-height: 1.7;
+    color: var(--text-secondary);
   }
   
   .prose h1 {
     font-size: 2.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-violet) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
   .prose h2 {
-    font-size: 1.5rem;
-    margin-top: 2rem;
+    font-size: 1.25rem;
+    margin-top: 3rem;
     margin-bottom: 1rem;
     font-weight: 600;
+    color: var(--text-primary);
+    padding-top: 2rem;
+    border-top: 1px solid var(--glass-border);
   }
   
   .prose h3 {
-    font-size: 1.125rem;
-    margin-top: 1rem;
-    margin-bottom: 0.75rem;
-    font-weight: 500;
+    font-size: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
   }
   
   .prose p {
@@ -158,24 +168,27 @@ Returns: Current sats in your wallet</code></pre>
   }
   
   .prose pre {
-    background: #f3f4f6;
-    padding: 1rem;
-    border-radius: 0.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1.25rem 1.5rem;
+    border-radius: 10px;
     overflow-x: auto;
     margin: 1rem 0;
   }
   
   .prose code {
-    font-family: 'Monaco', 'Menlo', monospace;
+    font-family: var(--font-mono, 'Monaco', 'Menlo', monospace);
     font-size: 0.875rem;
-    background: #f3f4f6;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
+    color: var(--sats-color);
+    background: var(--bg-elevated);
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
   }
   
   .prose pre code {
     background: none;
     padding: 0;
+    color: var(--sats-color);
   }
   
   .prose ol, .prose ul {
@@ -188,11 +201,16 @@ Returns: Current sats in your wallet</code></pre>
   }
   
   .prose a {
-    color: #3b82f6;
+    color: var(--accent-violet);
     text-decoration: none;
   }
   
   .prose a:hover {
     text-decoration: underline;
+  }
+
+  .prose strong {
+    color: var(--text-primary);
+    font-weight: 600;
   }
 </style>

@@ -64,26 +64,44 @@
   .page {
     max-width: 800px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 4rem 2rem;
   }
   
   .prose {
-    font-family: system-ui, -apple-system, sans-serif;
-    line-height: 1.6;
-    color: #1f2937;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    line-height: 1.7;
+    color: var(--text-secondary);
   }
   
   .prose h1 {
     font-size: 2.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
     font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-violet) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .prose > p:first-of-type {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--glass-border);
   }
   
   .prose h2 {
-    font-size: 1.5rem;
-    margin-top: 2rem;
+    font-size: 1.25rem;
+    margin-top: 3rem;
     margin-bottom: 1rem;
     font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   
   .prose p {
@@ -91,16 +109,22 @@
   }
   
   .prose pre {
-    background: #f3f4f6;
-    padding: 1rem;
-    border-radius: 0.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1.25rem 1.5rem;
+    border-radius: 10px;
     overflow-x: auto;
     margin: 1rem 0;
   }
   
   .prose code {
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 0.875rem;
+    font-family: var(--font-mono, 'Monaco', 'Menlo', monospace);
+    font-size: 0.9rem;
+    color: var(--sats-color);
+  }
+
+  .prose pre code {
+    color: var(--sats-color);
   }
   
   .prose ol, .prose ul {
@@ -113,11 +137,16 @@
   }
   
   .prose a {
-    color: #3b82f6;
+    color: var(--accent-violet);
     text-decoration: none;
   }
   
   .prose a:hover {
     text-decoration: underline;
+  }
+
+  .prose strong {
+    color: var(--text-primary);
+    font-weight: 600;
   }
 </style>
