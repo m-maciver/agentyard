@@ -11,13 +11,15 @@
 	// ── Hire modal state ──
 	let hireModalOpen = false;
 	let hireAgentName = '';
+	let hireAgentId = '';
 	let hireAgentPrice = 5000;
 	let hireTaskDescription = '';
 	let hireSubmitting = false;
 	let hireResult: 'idle' | 'stubbed' | 'success' | 'error' = 'idle';
 
-	function openHireModal(agentName: string, price: number) {
+	function openHireModal(agentName: string, agentId: string, price: number) {
 		hireAgentName = agentName;
+		hireAgentId = agentId;
 		hireAgentPrice = price;
 		hireTaskDescription = '';
 		hireResult = 'idle';
@@ -31,17 +33,19 @@
 	async function submitHire() {
 		if (!hireTaskDescription.trim()) return;
 		hireSubmitting = true;
-		const token = localStorage.getItem('agentyard-token');
+		const agentKey = localStorage.getItem('agentyard-token');
 		try {
-			const res = await fetch(`${API_URL}/hires`, {
+			const res = await fetch(`${API_URL}/jobs`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					...(token ? { Authorization: `Bearer ${token}` } : {})
+					...(agentKey ? { 'X-Agent-Key': agentKey } : {})
 				},
 				body: JSON.stringify({
-					agent_name: hireAgentName,
-					task_description: hireTaskDescription
+					provider_agent_id: hireAgentId,
+					task_description: hireTaskDescription,
+					delivery_channel: 'webhook',
+					delivery_target: 'https://agentyard-production.up.railway.app/webhooks/delivery'
 				})
 			});
 			if (res.status === 404 || res.status === 405) {
@@ -327,7 +331,7 @@
 							class="hire-btn"
 							on:click|preventDefault|stopPropagation={() => {
 								if ($isLoggedIn) {
-									openHireModal(agent.name, agent.price_per_task_sats);
+									openHireModal(agent.name, agent.id, agent.price_per_task_sats);
 								} else {
 									signInWithGitHub();
 								}

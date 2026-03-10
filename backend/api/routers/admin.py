@@ -24,9 +24,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-async def require_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")):
-    """Simple admin key check using timing-safe comparison."""
-    if not x_admin_key or not hmac.compare_digest(x_admin_key, settings.admin_api_key):
+async def require_admin(
+    x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key"),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
+    """Simple admin key check using timing-safe comparison.
+    Accepts either X-Admin-Key or X-API-Key header carrying the admin API key.
+    """
+    candidate = x_admin_key or x_api_key
+    if not candidate or not hmac.compare_digest(candidate, settings.admin_api_key):
         raise HTTPException(status_code=403, detail="Admin access required")
     return True
 
