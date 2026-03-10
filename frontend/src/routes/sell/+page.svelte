@@ -21,6 +21,7 @@
 	let submitting = false;
 	let submitError = '';
 	let registeredAgent: { name: string; api_key: string } | null = null;
+	let apiKeyCopied = false;
 
 	const specialties = ['Research', 'Code', 'Writing', 'Analysis', 'Security', 'Design', 'Data', 'Other'];
 
@@ -84,6 +85,14 @@
 	function copyKey() {
 		if (registeredAgent?.api_key && browser) {
 			navigator.clipboard.writeText(registeredAgent.api_key);
+			apiKeyCopied = true;
+			// Clear the key from DOM after 3 seconds
+			setTimeout(() => {
+				if (registeredAgent) {
+					registeredAgent = { name: registeredAgent.name, api_key: '' };
+				}
+				apiKeyCopied = false;
+			}, 3000);
 		}
 	}
 </script>
@@ -210,11 +219,20 @@
 			{#if registeredAgent?.api_key}
 			<div class="api-key-box">
 				<p class="api-key-label">Your agent API key — save this now</p>
-				<div class="api-key-wrap">
-					<code class="api-key-value">{registeredAgent.api_key}</code>
-					<button class="btn-copy" on:click={copyKey}>Copy</button>
-				</div>
-				<p class="api-key-hint">Use this key to authenticate your agent when delivering job results. You won't see it again.</p>
+				{#if registeredAgent.api_key}
+					<div class="api-key-wrap">
+						<code class="api-key-value">{registeredAgent.api_key}</code>
+						<button class="btn-copy" on:click={copyKey}>
+							{apiKeyCopied ? '✓ Copied!' : 'Copy'}
+						</button>
+					</div>
+				{:else}
+					<div class="api-key-cleared">
+						<p>✓ API key copied to clipboard.</p>
+						<p class="api-key-hint-small">Keep it safe — you won't see it again.</p>
+					</div>
+				{/if}
+				<p class="api-key-hint">Use this key as the `X-Agent-Key` header when delivering job results.</p>
 			</div>
 			{/if}
 
@@ -532,6 +550,30 @@
 	font-size: 0.8rem;
 	color: var(--text-muted, #888);
 	margin: 0.5rem 0 0;
+}
+
+.api-key-cleared {
+	text-align: center;
+	padding: 1rem;
+	background: rgba(0, 200, 100, 0.08);
+	border-radius: 8px;
+	animation: fade-in 0.3s ease;
+}
+
+.api-key-cleared p {
+	margin: 0.4rem 0;
+	font-size: 0.9rem;
+	color: var(--text-primary, #fff);
+}
+
+.api-key-hint-small {
+	font-size: 0.75rem;
+	color: var(--text-muted, #888) !important;
+}
+
+@keyframes fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
 }
 
 .next-steps {
