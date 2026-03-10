@@ -2,18 +2,40 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { authStore, isLoggedIn } from '$lib/stores/auth';
-	// Mock data removed — using real API
 	import { signInWithGitHub, mapBackendUser, type GitHubUser } from '$lib/auth';
-
+	import CountdownTimer from '$lib/components/CountdownTimer.svelte';
+	import EscrowWindow from '$lib/components/EscrowWindow.svelte';
 	import { PUBLIC_API_URL } from '$env/static/public';
+
 	const API_URL = PUBLIC_API_URL || 'https://agentyard-production.up.railway.app';
 
 	let user: GitHubUser | null = null;
 	let agentActive = true;
 
 	// Real job data from API
-	let recentJobs: Array<{ id: string; task_description: string; status: string; price_sats: number; created_at?: string; provider_agent_id?: string }> = [];
+	interface HiringJob {
+		id: string;
+		task_description: string;
+		status: string;
+		price_sats: number;
+		fee_sats: number;
+		created_at: string;
+		provider_agent_id: string;
+		client_agent_id?: string;
+	}
+
+	let recentJobs: HiringJob[] = [];
 	let jobsLoading = true;
+	let expandedJobId: string | null = null;
+	let refreshInterval: NodeJS.Timeout | undefined;
+
+	// Mock stats for now (would come from API)
+	const mockStats = {
+		totalEarned: 125000,
+		jobsCompleted: 18,
+		activeListings: 1,
+		avgRating: 4.7
+	};
 
 	onMount(async () => {
 		user = $authStore;
@@ -39,23 +61,51 @@
 			}
 
 			// Fetch real jobs
-			try {
-				const jobsRes = await fetch(`${API_URL}/jobs`, {
-					headers: { Authorization: `Bearer ${token}` }
-				});
-				if (jobsRes.ok) {
-					const data = await jobsRes.json();
-					recentJobs = (data.jobs ?? data ?? []).slice(0, 10);
-				}
-			} catch {
-				// Jobs unavailable — show empty state
-			} finally {
-				jobsLoading = false;
-			}
+			await fetchJobs(token);
+
+			// Auto-refresh every 5s for active escrow windows
+			refreshInterval = setInterval(() => fetchJobs(token), 5000);
 		} else {
 			jobsLoading = false;
 		}
 	});
+
+	async function fetchJobs(token: string) {
+		try {
+			const jobsRes = await fetch(`${API_URL}/jobs`, {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (jobsRes.ok) {
+				const data = await jobsRes.json();
+				recentJobs = (data.jobs ?? data ?? []).slice(0, 10);
+			}
+		} catch {
+			// Jobs unavailable
+		} finally {
+			jobsLoading = false;
+		}
+	}
+
+	function handleAcceptJob(jobId: string) {
+		// TODO: Call API to accept job
+		console.log('Accept job:', jobId);
+	}
+
+	function handleDisputeJob(jobId: string) {
+		// TODO: Call API to dispute job
+		console.log('Dispute job:', jobId);
+	}
+
+	function toggleExpanded(jobId: string) {
+		expandedJobId = expandedJobId === jobId ? null : jobId;
+	}
+
+	function isWithinEscrowWindow(createdAt: string, windowMinutes: number = 10): boolean {
+		const now = new Date();
+		const created = new Date(createdAt);
+		const diff = now.getTime() - created.getTime();
+		return diff < windowMinutes * 60 * 1000;
+	}
 
 	$: user = $authStore;
 	$: if (typeof window !== 'undefined' && !$isLoggedIn) {
@@ -64,6 +114,10 @@
 
 	function formatDate(dateStr: string) {
 		return new Date(dateStr).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+	}
+
+	function formatTime(dateStr: string) {
+		return new Date(dateStr).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
 	}
 </script>
 
@@ -178,39 +232,116 @@
 				</div>
 			</div>
 
-			<!-- Recent activity -->
-			<div class="activity-grid">
-				<!-- Recent hires -->
-				<section class="activity-section glass-card">
-					<div class="section-header">
-						<h3 class="section-title">Recent hires</h3>
-						<a href="/dashboard/hires" class="section-link">View all →</a>
+			<!-- Hiring feed (autonomous hiring timeline) -->
+			<section class="hiring-feed">
+				<div class="feed-header">
+					<h2 class="feed-title">⚡ Autonomous hiring feed</h2>
+					<p class="feed-sub">Jobs your agent is managing and agents it has hired</p>
+					<a href="/dashboard/hires" class="feed-link">View full history →</a>
+				</div>
+
+				{#if jobsLoading}
+					<div class="feed-loading">
+						<div class="feed-spinner"></div>
+						<p>Loading hiring timeline…</p>
 					</div>
-					<div class="activity-list">
-						{#if jobsLoading}
-							<div class="activity-empty">Loading jobs…</div>
-						{:else if recentJobs.length === 0}
-							<div class="activity-empty">
-								<p>No jobs yet.</p>
-								<a href="/" class="activity-cta">Hire an agent →</a>
-							</div>
-						{:else}
-							{#each recentJobs as job}
-								<div class="activity-item">
-									<div class="activity-info">
-										<span class="activity-name">{job.provider_agent_id ?? 'Agent'}</span>
-										<span class="activity-task">{job.task_description?.slice(0, 60)}{job.task_description?.length > 60 ? '…' : ''}</span>
+				{:else if recentJobs.length === 0}
+					<div class="feed-empty glass-card">
+						<div class="empty-icon">🤝</div>
+						<h3>No hiring activity yet</h3>
+						<p>Your agent hasn't hired specialists yet. When it does, you'll see the entire collaboration here.</p>
+						<a href="/" class="btn-hire-first">Hire an agent →</a>
+					</div>
+				{:else}
+					<div class="feed-timeline">
+						{#each recentJobs as job (job.id)}
+							{@const isEscrow = ['escrowed', 'in_progress'].includes(job.status)}
+							{@const withinWindow = isWithinEscrowWindow(job.created_at)}
+							<div class="feed-card glass-card" class:escrow-active={isEscrow && withinWindow}>
+								<div class="card-timeline-marker"></div>
+
+								<!-- Card header -->
+								<div class="card-top">
+									<div class="card-title-row">
+										<span class="card-icon">⚙️</span>
+										<div class="card-title-info">
+											<h3 class="card-title">Hired <strong>{job.provider_agent_id}</strong></h3>
+											<p class="card-subtitle">for: {job.task_description.slice(0, 80)}{job.task_description.length > 80 ? '…' : ''}</p>
+										</div>
 									</div>
-									<div class="activity-meta">
-										<span class="activity-sats font-mono">-{job.price_sats?.toLocaleString() ?? '—'} ⚡</span>
-										<span class="activity-status status-{job.status}">{job.status}</span>
+									<div class="card-meta">
+										<span class="card-date font-mono">{formatDate(job.created_at)}</span>
+										<span class="card-time font-mono">{formatTime(job.created_at)}</span>
 									</div>
 								</div>
-							{/each}
-						{/if}
+
+								<!-- Status and cost row -->
+								<div class="card-status-row">
+									<span class="status-badge status-{job.status}">{job.status}</span>
+									<span class="cost-sats font-mono">⚡ {job.price_sats.toLocaleString()} sats</span>
+								</div>
+
+								<!-- Escrow window (if active) -->
+								{#if isEscrow && withinWindow}
+									<div class="card-escrow-section">
+										<CountdownTimer
+											createdAt={job.created_at}
+											windowMinutes={10}
+											onExpire={() => console.log('Escrow window expired for', job.id)}
+										/>
+										<EscrowWindow priceInSats={job.price_sats} platformFeePercent={0.12} />
+									</div>
+								{/if}
+
+								<!-- Expandable details -->
+								<button
+									class="card-expand-btn"
+									on:click={() => toggleExpanded(job.id)}
+									class:expanded={expandedJobId === job.id}
+								>
+									<span class="expand-text">{expandedJobId === job.id ? 'Hide details' : 'Show details'}</span>
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<polyline points="6 9 12 15 18 9"></polyline>
+									</svg>
+								</button>
+
+								{#if expandedJobId === job.id}
+									<div class="card-details">
+										<div class="detail-row">
+											<span class="detail-key">Job ID:</span>
+											<span class="detail-val font-mono">{job.id.slice(0, 12)}…</span>
+										</div>
+										<div class="detail-row">
+											<span class="detail-key">Seller:</span>
+											<a href="/agents/{job.provider_agent_id}" class="detail-val agent-link">@{job.provider_agent_id}</a>
+										</div>
+										<div class="detail-row">
+											<span class="detail-key">Full task:</span>
+											<span class="detail-val detail-wrap">{job.task_description}</span>
+										</div>
+										<div class="detail-row">
+											<span class="detail-key">Payment:</span>
+											<span class="detail-val font-mono">⚡ {job.price_sats.toLocaleString()} + {job.fee_sats?.toLocaleString() ?? 0} fee</span>
+										</div>
+									</div>
+								{/if}
+
+								<!-- Action buttons (if within escrow window) -->
+								{#if isEscrow && withinWindow}
+									<div class="card-actions">
+										<button class="btn-action btn-accept" on:click={() => handleAcceptJob(job.id)}>
+											✓ Accept delivery
+										</button>
+										<button class="btn-action btn-dispute" on:click={() => handleDisputeJob(job.id)}>
+											⚠ Dispute
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/each}
 					</div>
-				</section>
-			</div>
+				{/if}
+			</section>
 		</main>
 	</div>
 {/if}
@@ -673,6 +804,381 @@
 		color: var(--text-muted);
 	}
 
+	/* ═══ HIRING FEED ═══ */
+	.hiring-feed {
+		margin-top: 32px;
+	}
+
+	.feed-header {
+		margin-bottom: 24px;
+	}
+
+	.feed-title {
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
+		font-weight: 700;
+		font-size: 24px;
+		color: var(--text-primary);
+		margin: 0 0 6px;
+		letter-spacing: -0.01em;
+	}
+
+	.feed-sub {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--text-secondary);
+		margin: 0 0 12px;
+	}
+
+	.feed-link {
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		color: var(--accent-primary);
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.feed-link:hover {
+		text-decoration: underline;
+	}
+
+	.feed-loading {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		padding: 48px;
+		color: var(--text-muted);
+	}
+
+	.feed-spinner {
+		width: 24px;
+		height: 24px;
+		border: 2px solid rgba(255, 255, 255, 0.1);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: feed-spin 0.6s linear infinite;
+	}
+
+	@keyframes feed-spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.feed-empty {
+		padding: 64px 24px;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.empty-icon {
+		font-size: 48px;
+		line-height: 1;
+		margin-bottom: 8px;
+	}
+
+	.feed-empty h3 {
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
+		font-weight: 600;
+		font-size: 18px;
+		color: var(--text-primary);
+		margin: 0;
+	}
+
+	.feed-empty p {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--text-secondary);
+		margin: 0;
+		max-width: 380px;
+	}
+
+	.btn-hire-first {
+		display: inline-flex;
+		background: var(--accent-primary);
+		color: white;
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
+		font-weight: 600;
+		font-size: 14px;
+		padding: 10px 24px;
+		border: none;
+		border-radius: 9999px;
+		text-decoration: none;
+		cursor: pointer;
+		transition: opacity 0.15s;
+		margin-top: 8px;
+	}
+
+	.btn-hire-first:hover {
+		opacity: 0.9;
+	}
+
+	.feed-timeline {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	/* Feed card */
+	.feed-card {
+		position: relative;
+		padding: 20px;
+		border: 1px solid var(--glass-border);
+		border-radius: 14px;
+		background: var(--glass-bg);
+		transition: all 0.2s ease;
+	}
+
+	.feed-card.escrow-active {
+		border-color: rgba(245, 158, 11, 0.3);
+		background: linear-gradient(135deg, var(--glass-bg), rgba(245, 158, 11, 0.05));
+		box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
+	}
+
+	.card-timeline-marker {
+		position: absolute;
+		left: -12px;
+		top: 28px;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--accent-primary);
+		border: 3px solid var(--bg-base);
+	}
+
+	.card-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 12px;
+	}
+
+	.card-title-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		flex: 1;
+	}
+
+	.card-icon {
+		font-size: 20px;
+		line-height: 1;
+		flex-shrink: 0;
+		margin-top: 2px;
+	}
+
+	.card-title-info {
+		flex: 1;
+	}
+
+	.card-title {
+		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
+		font-weight: 600;
+		font-size: 15px;
+		color: var(--text-primary);
+		margin: 0 0 3px;
+	}
+
+	.card-title strong {
+		color: var(--accent-violet);
+		font-weight: 700;
+	}
+
+	.card-subtitle {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
+		margin: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.card-meta {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 2px;
+		flex-shrink: 0;
+	}
+
+	.card-date, .card-time {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+
+	.card-status-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 12px;
+	}
+
+	.status-badge {
+		font-family: 'Inter', sans-serif;
+		font-size: 11px;
+		font-weight: 600;
+		padding: 3px 10px;
+		border-radius: 20px;
+		text-transform: capitalize;
+	}
+
+	.status-escrowed {
+		background: rgba(245, 158, 11, 0.15);
+		color: #f7931a;
+	}
+
+	.status-in_progress {
+		background: rgba(59, 130, 246, 0.15);
+		color: #3b82f6;
+	}
+
+	.status-completed {
+		background: rgba(34, 197, 94, 0.15);
+		color: #22c55e;
+	}
+
+	.status-disputed {
+		background: rgba(239, 68, 68, 0.15);
+		color: #ef4444;
+	}
+
+	.cost-sats {
+		font-family: 'Inter', sans-serif;
+		font-size: 13px;
+		color: var(--sats-color);
+		font-weight: 500;
+		margin-left: auto;
+	}
+
+	.card-escrow-section {
+		display: flex;
+		gap: 16px;
+		margin: 16px 0;
+		padding: 12px 0;
+		border-top: 1px solid var(--glass-border);
+		border-bottom: 1px solid var(--glass-border);
+	}
+
+	.card-expand-btn {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		background: transparent;
+		border: none;
+		color: var(--accent-primary);
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		font-weight: 500;
+		padding: 6px 0;
+		cursor: pointer;
+		transition: opacity 0.15s;
+		margin-top: 8px;
+	}
+
+	.card-expand-btn:hover {
+		opacity: 0.8;
+	}
+
+	.card-expand-btn svg {
+		transition: transform 0.2s ease;
+	}
+
+	.card-expand-btn.expanded svg {
+		transform: rotate(180deg);
+	}
+
+	.card-details {
+		margin-top: 12px;
+		padding: 12px;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 8px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.detail-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.detail-key {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-muted);
+		font-weight: 500;
+		flex-shrink: 0;
+		width: 80px;
+	}
+
+	.detail-val {
+		font-family: 'Inter', sans-serif;
+		font-size: 12px;
+		color: var(--text-secondary);
+		flex: 1;
+	}
+
+	.detail-wrap {
+		word-break: break-word;
+	}
+
+	.agent-link {
+		color: var(--accent-primary);
+		text-decoration: none;
+	}
+
+	.agent-link:hover {
+		text-decoration: underline;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 8px;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--glass-border);
+	}
+
+	.btn-action {
+		flex: 1;
+		padding: 9px 14px;
+		border: 1px solid var(--glass-border);
+		border-radius: 8px;
+		font-family: 'Inter', sans-serif;
+		font-weight: 500;
+		font-size: 12px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.btn-accept {
+		background: rgba(34, 197, 94, 0.12);
+		color: #22c55e;
+		border-color: rgba(34, 197, 94, 0.3);
+	}
+
+	.btn-accept:hover {
+		background: rgba(34, 197, 94, 0.2);
+		border-color: #22c55e;
+	}
+
+	.btn-dispute {
+		background: rgba(239, 68, 68, 0.12);
+		color: #ef4444;
+		border-color: rgba(239, 68, 68, 0.3);
+	}
+
+	.btn-dispute:hover {
+		background: rgba(239, 68, 68, 0.2);
+		border-color: #ef4444;
+	}
+
 	/* Responsive */
 	@media (max-width: 1024px) {
 		.stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -685,6 +1191,9 @@
 		.activity-grid { grid-template-columns: 1fr; }
 		.agent-card-top { flex-direction: column; align-items: flex-start; }
 		.agent-card-right { align-items: flex-start; }
+		.card-escrow-section { flex-direction: column; }
+		.card-top { flex-direction: column; }
+		.card-meta { align-items: flex-start; }
 	}
 
 	@media (max-width: 480px) {
