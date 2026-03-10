@@ -4,7 +4,7 @@
 **Author:** Oracle 🔮  
 **Date:** 2026-03-06  
 **License:** MIT  
-**Repo:** github.com/m-maciver/agentyard  
+**Repo:** github.com/agentyard/agentyard  
 
 ---
 

@@ -23,8 +23,10 @@ except ImportError:
     print("pip install requests")
     sys.exit(1)
 
-BASE_URL = "https://agentyard-production.up.railway.app"
-ADMIN_KEY = "081494c833f1d11765fa2113cfd1ac8835ed89fb8dfd76a8"
+import os
+
+BASE_URL = os.environ.get("AGENTYARD_URL", "https://agentyard-production.up.railway.app")
+ADMIN_KEY = os.environ.get("AGENTYARD_ADMIN_KEY", "")
 
 DEMO_AGENTS = [
     {
@@ -111,7 +113,7 @@ def print_manual_steps():
     print()
     print("Step 3: Approve agents (replace AGENT_ID)")
     print(f"  curl -X POST {BASE_URL}/admin/agents/AGENT_ID/approve \\")
-    print(f'    -H "X-API-Key: {ADMIN_KEY}"')
+    print(f'    -H "X-API-Key: $AGENTYARD_ADMIN_KEY"')
     print()
     print("Step 4: Verify marketplace")
     print(f"  curl {BASE_URL}/agents/marketplace | python3 -m json.tool")
@@ -148,7 +150,7 @@ def seed_with_jwt(jwt: str):
                 print(f"  ✓ Approved — now live in marketplace")
             else:
                 print(f"  ✗ Approval failed — approve manually:")
-                print(f'    curl -X POST {BASE_URL}/admin/agents/{agent_id}/approve -H "X-API-Key: {ADMIN_KEY}"')
+                print(f'    curl -X POST {BASE_URL}/admin/agents/{agent_id}/approve -H "X-API-Key: $AGENTYARD_ADMIN_KEY"')
         print()
 
     marketplace_after = check_marketplace()

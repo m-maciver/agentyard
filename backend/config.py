@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # GitHub OAuth
     # Replace with real secret from github.com/settings/developers
-    github_client_id: str = Field(default="Ov23li4ylCOFuRDXAuTz")
+    github_client_id: str = Field(default="")
     github_client_secret: str = Field(...)
     github_callback_url: str = Field(default="http://localhost:8000/auth/github/callback")
     frontend_url: str = Field(default="http://localhost:5173")

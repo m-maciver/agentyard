@@ -1,22 +1,28 @@
-# Deploying AgentYard Backend to Railway
+# Deploy AgentYard Backend to Railway
 
 ## Prerequisites
-- Railway account at https://railway.app
-- GitHub repo: `m-maciver/agentyard`
+- [Railway account](https://railway.app)
+- [Railway CLI](https://docs.railway.app/develop/cli): `npm install -g @railway/cli`
+- GitHub OAuth App (create at https://github.com/settings/applications/new)
 
----
+## Quick Deploy
 
-## Option A: Deploy via Railway Dashboard (manual, recommended for first deploy)
+### 1. Fork and clone
+```bash
+git clone https://github.com/your-org/agentyard.git
+cd agentyard/backend
+```
 
-### 1. Create a new Railway project
-1. Go to https://railway.app/new
-2. Select **Deploy from GitHub repo**
-3. Connect your GitHub account if not done
-4. Select `m-maciver/agentyard`
-5. Railway will detect the `backend/` directory — set the **Root Directory** to `backend`
+### 2. Create Railway project
+```bash
+railway login
+railway init
+railway add --service agentyard-backend
+```
 
-### 2. Set environment variables
-In your Railway project → **Variables** tab, add all of the following:
+### 3. Configure environment variables
+
+In Railway dashboard → your service → Variables, set:
 
 | Variable | Value |
 |---|---|
@@ -24,97 +30,57 @@ In your Railway project → **Variables** tab, add all of the following:
 | `REDIS_URL` | `disabled` |
 | `LNBITS_URL` | `stub` |
 | `LIGHTNING_STUB` | `true` |
-| `JWT_SECRET` | `bc508f67fa12a7be1f42638003ffecb3373f2b1da23e85f99adb22e4be0666aa` |
+| `JWT_SECRET` | *(generate: `openssl rand -hex 32`)* |
 | `APP_ENV` | `production` |
 | `DEBUG` | `false` |
 | `PLATFORM_FEE_RATE` | `0.12` |
-| `ADMIN_EMAIL` | `admin@agentyard.dev` |
-| `ADMIN_API_KEY` | `081494c833f1d11765fa2113cfd1ac8835ed89fb8dfd76a8` |
-| `GITHUB_CLIENT_ID` | `Ov23li4ylCOFuRDXAuTz` |
-| `GITHUB_CLIENT_SECRET` | *(get from github.com/settings/developers)* |
-| `GITHUB_CALLBACK_URL` | `https://agentyard-backend.up.railway.app/auth/github/callback` |
-| `FRONTEND_URL` | `https://frontend-xi-three-92.vercel.app` |
+| `ADMIN_EMAIL` | `admin@yourdomain.dev` |
+| `ADMIN_API_KEY` | *(generate: `openssl rand -hex 24`)* |
+| `GITHUB_CLIENT_ID` | *(from your GitHub OAuth App)* |
+| `GITHUB_CLIENT_SECRET` | *(from your GitHub OAuth App — Railway env only, never commit)* |
+| `FRONTEND_URL` | `https://your-frontend.vercel.app` |
+| `GITHUB_CALLBACK_URL` | `https://your-backend.railway.app/auth/github/callback` |
 
-> ⚠️ **JWT_SECRET and ADMIN_API_KEY** above are the generated values. Rotate them if you deploy to a shared/public environment.
+> **Security:** Never commit real values for `JWT_SECRET`, `ADMIN_API_KEY`, or `GITHUB_CLIENT_SECRET` to your repository.
 
-### 3. Configure the service
-- **Root Directory:** `backend`
-- **Builder:** Dockerfile (auto-detected from `railway.toml`)
-- **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- **Health Check Path:** `/health`
+### 4. Generate secrets
+```bash
+# JWT Secret
+openssl rand -hex 32
 
-### 4. Deploy
-Click **Deploy** — Railway will build the Docker image and start the service.
+# Admin API Key  
+openssl rand -hex 24
+```
 
-### 5. Find the deployed URL
-In your Railway project → **Settings** → **Domains** → generate a public domain.
-The URL will look like: `https://agentyard-backend-production.up.railway.app`
+### 5. Deploy
+```bash
+railway up
+```
 
 ### 6. Verify
 ```bash
-curl https://<your-railway-url>/health
-# Expected: {"status":"ok","version":"0.1.0","db":"connected"}
-
-curl https://<your-railway-url>/docs
-# Should load FastAPI Swagger UI
+curl https://your-backend.railway.app/health
+# {"status":"ok","version":"0.1.0","db":"connected"}
 ```
 
----
+## GitHub OAuth Setup
 
-## Option B: Deploy via Railway CLI
+1. Go to https://github.com/settings/applications/new
+2. Set **Callback URL** to: `https://your-backend.railway.app/auth/github/callback`
+3. Copy Client ID and Client Secret → set as Railway env vars
 
-### Install Railway CLI
+## Local Development
+
 ```bash
-npm install -g @railway/cli
-# or
-brew install railway
+cp .env.example .env.local
+# Edit .env.local with your values
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-### Login and deploy
-```bash
-railway login
-cd /Users/michaelmaciver/.openclaw/workspace/agentyard/backend
-railway link  # link to existing project or create new
-railway up    # deploy from current directory
-```
+## Architecture
 
-### Set env vars via CLI
-```bash
-railway variables set DATABASE_URL="sqlite+aiosqlite:///./agentyard.db"
-railway variables set REDIS_URL="disabled"
-railway variables set LNBITS_URL="stub"
-railway variables set LIGHTNING_STUB="true"
-railway variables set JWT_SECRET="bc508f67fa12a7be1f42638003ffecb3373f2b1da23e85f99adb22e4be0666aa"
-railway variables set APP_ENV="production"
-railway variables set DEBUG="false"
-railway variables set PLATFORM_FEE_RATE="0.12"
-railway variables set ADMIN_EMAIL="admin@agentyard.dev"
-railway variables set ADMIN_API_KEY="081494c833f1d11765fa2113cfd1ac8835ed89fb8dfd76a8"
-railway variables set GITHUB_CLIENT_ID="Ov23li4ylCOFuRDXAuTz"
-railway variables set GITHUB_CLIENT_SECRET="<your_secret_from_github>"
-railway variables set GITHUB_CALLBACK_URL="https://agentyard-backend.up.railway.app/auth/github/callback"
-railway variables set FRONTEND_URL="https://frontend-xi-three-92.vercel.app"
-```
-
----
-
-## Lightning Stub Notes
-
-The backend is running with **Lightning fully stubbed**. All invoice creation and payment calls return fake responses:
-- `payment_hash`: `stub_<uuid>`
-- `payment_request`: `lnbc_stub_invoice_for_testing`
-
-No real sats are moved. To enable real Lightning:
-1. Set `LNBITS_URL` to your LNBits instance URL
-2. Set `LIGHTNING_STUB=false`
-3. Configure all `LNBITS_*_WALLET_*KEY` variables
-
----
-
-## Redis/ARQ Notes
-
-Background workers (auto-release escrow, retry webhooks) are disabled with `REDIS_URL=disabled`.
-Jobs complete synchronously. To enable workers:
-1. Add a Redis service in Railway
-2. Set `REDIS_URL` to the Redis connection string (Railway provides this automatically)
-3. Deploy a second service running: `arq api.workers.tasks.WorkerSettings`
+- **Framework:** FastAPI + SQLite (aiosqlite)
+- **Auth:** GitHub OAuth → JWT
+- **Payments:** Lightning via LNbits (stub mode for development)
+- **Deployment:** Railway (auto-deploy on git push)
