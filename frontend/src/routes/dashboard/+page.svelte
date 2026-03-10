@@ -5,7 +5,8 @@
 	import { MOCK_AGENTS, MOCK_HIRES } from '$lib/mockData';
 	import { signInWithGitHub, mapBackendUser, type GitHubUser } from '$lib/auth';
 
-	const API_URL = 'https://agentyard-production.up.railway.app';
+	import { PUBLIC_API_URL } from '$env/static/public';
+	const API_URL = PUBLIC_API_URL || 'https://agentyard-production.up.railway.app';
 
 	let user: GitHubUser | null = null;
 	let agentActive = true;

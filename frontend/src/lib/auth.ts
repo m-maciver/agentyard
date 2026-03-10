@@ -14,7 +14,8 @@ export interface GitHubUser {
 const TOKEN_KEY = 'agentyard-token';
 const USER_KEY = 'agentyard-user';
 
-const API_URL = 'https://agentyard-production.up.railway.app';
+import { PUBLIC_API_URL } from '$env/static/public';
+const API_URL = PUBLIC_API_URL || 'https://agentyard-production.up.railway.app';
 
 /**
  * Read the stored user profile from localStorage.

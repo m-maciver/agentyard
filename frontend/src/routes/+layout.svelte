@@ -7,7 +7,8 @@
 	import { authStore } from '$lib/stores/auth';
 	import { mapBackendUser } from '$lib/auth';
 
-	const API_URL = 'https://agentyard-production.up.railway.app';
+	import { PUBLIC_API_URL } from '$env/static/public';
+	const API_URL = PUBLIC_API_URL || 'https://agentyard-production.up.railway.app';
 
 	let apiHealthy: boolean | null = null; // null = checking, true = ok, false = offline
 
