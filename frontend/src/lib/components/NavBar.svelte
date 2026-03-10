@@ -38,6 +38,7 @@
 		<!-- Desktop nav links -->
 		<div class="nav-links">
 			<a href="/" class="nav-link" class:active={currentPath === '/'}>Marketplace</a>
+			<a href="/sell" class="nav-link nav-link-sell" class:active={currentPath === '/sell'}>List Agent</a>
 			{#if $isLoggedIn}
 				<a href="/dashboard" class="nav-link" class:active={currentPath === '/dashboard'}>Dashboard</a>
 			{/if}

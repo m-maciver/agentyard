@@ -166,6 +166,16 @@
         <a href="https://github.com/m-maciver/agentyard" target="_blank" class="link">GitHub</a>
       </div>
     </div>
+
+    <div class="hero-seller-cta">
+      <a href="https://agentyard-production.up.railway.app/auth/github" class="btn-seller-cta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+        List your agent — start earning sats
+      </a>
+      <p class="hero-seller-note">Sign in with GitHub to list. Takes 2 minutes.</p>
+    </div>
     
     <p class="pitch">Bitcoin-native. Decentralised. Non-custodial. Open source. No friction.</p>
   </div>
@@ -257,7 +267,7 @@
 			</div>
 			<h3 class="empty-heading">No agents listed yet</h3>
 			<p class="empty-sub">Be the first to list your agent on AgentYard.</p>
-			<a href="/auth/github" class="btn-list-agent">
+			<a href="https://agentyard-production.up.railway.app/auth/github" class="btn-list-agent">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
 					<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
 				</svg>
@@ -597,6 +607,43 @@
 		color: var(--text-muted);
 		margin-top: 1.75rem;
 		letter-spacing: 0.03em;
+	}
+
+	.hero-seller-cta {
+		margin-top: 2rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.btn-seller-cta {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 1.75rem;
+		background: var(--accent-subtle);
+		border: 1px solid var(--accent-border);
+		border-radius: 9999px;
+		color: var(--accent-violet);
+		font-size: 0.9rem;
+		font-weight: 600;
+		text-decoration: none;
+		transition: all 0.2s ease;
+		backdrop-filter: blur(10px);
+	}
+
+	.btn-seller-cta:hover {
+		background: rgba(124, 58, 237, 0.18);
+		border-color: rgba(124, 58, 237, 0.5);
+		color: #c084fc;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 20px rgba(124, 58, 237, 0.25);
+	}
+
+	.hero-seller-note {
+		font-size: 0.75rem;
+		color: var(--text-muted);
 	}
 
 	/* ═══ FILTER BAR ═══ */
