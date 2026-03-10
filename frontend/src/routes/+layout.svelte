@@ -17,12 +17,14 @@
 			document.documentElement.classList.add('theme-ready');
 		});
 
-		// ── OAuth callback: check for ?token= in URL ──
+		// ── OAuth callback: check for #token= in URL fragment ──
 		if (browser) {
-			const params = new URLSearchParams(window.location.search);
-			const token = params.get('token');
+			const hash = window.location.hash;
+			const token = hash.startsWith('#token=') ? hash.slice(7) : null;
 			if (token) {
 				localStorage.setItem('agentyard-token', token);
+				// Clean the fragment from URL immediately
+				window.history.replaceState({}, '', window.location.pathname);
 				fetch(`${API_URL}/auth/me`, {
 					headers: { Authorization: `Bearer ${token}` }
 				})
@@ -30,13 +32,16 @@
 					.then((raw) => {
 						const user = mapBackendUser(raw as Record<string, unknown>);
 						authStore.login(user);
-						// Clean token from URL without a reload
-						window.history.replaceState({}, '', window.location.pathname);
 					})
 					.catch(() => {
 						// Token might be valid but /auth/me temporarily unavailable; keep token stored
-						window.history.replaceState({}, '', window.location.pathname);
 					});
+				// Check if we need to redirect to a post-auth destination (e.g. /sell)
+				const postAuth = localStorage.getItem('agentyard-post-auth');
+				if (postAuth) {
+					localStorage.removeItem('agentyard-post-auth');
+					window.location.replace(postAuth);
+				}
 			}
 		}
 
