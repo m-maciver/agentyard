@@ -59,7 +59,7 @@ export async function listAgents(params?: AgentListParams): Promise<AgentListRes
 	if (params?.available !== undefined) queryParams.available = params.available;
 	if (params?.page !== undefined) queryParams.page = params.page;
 	if (params?.page_size !== undefined) queryParams.page_size = params.page_size;
-	return api.get<AgentListResponse>('/agents', queryParams);
+	return api.get<AgentListResponse>('/agents/marketplace', queryParams);
 }
 
 export async function getAgent(agentId: string): Promise<Agent> {

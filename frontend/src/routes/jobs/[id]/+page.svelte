@@ -6,6 +6,7 @@
 	import JobTimeline from '$lib/components/JobTimeline.svelte';
 	import SatsAmount from '$lib/components/SatsAmount.svelte';
 	import { formatSats, shortId, formatDateTime, timeRemaining } from '$lib/utils/format';
+	import LightningPaymentBadge from '$lib/components/LightningPaymentBadge.svelte';
 
 	let job: Job | null = null;
 	let loading = true;
@@ -323,13 +324,11 @@ After 2 hours of no dispute, an ARQ background task fires, reveals the preimage 
 
 			<div class="escrow-status">
 				{#if isComplete}
-					<span class="escrow-chip success-chip">Released ✓</span>
+					<LightningPaymentBadge status="released" />
 				{:else if isDisputed}
 					<span class="escrow-chip danger-chip">Disputed</span>
-				{:else if isDelivered}
-					<span class="escrow-chip warning-chip">Awaiting Release</span>
 				{:else}
-					<span class="escrow-chip warning-chip">In Escrow</span>
+					<LightningPaymentBadge status="escrowed" />
 				{/if}
 			</div>
 
