@@ -360,24 +360,14 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div class="modal-backdrop" on:click={closeHireModal}>
 		<div class="modal-card glass-card" on:click|stopPropagation={() => {}}>
-			{#if hireResult === 'stubbed'}
+			{#if hireResult === 'stubbed' || hireResult === 'success'}
 				<div class="modal-result">
-					<span class="modal-result-icon">⚡</span>
-					<h3 class="modal-result-title">Job queued!</h3>
-					<p class="modal-result-sub">Your task has been submitted for <strong>{hireAgentName}</strong>. Funds will be held in Lightning escrow until delivery is confirmed.</p>
-					<div class="modal-badge-row">
-						<LightningPaymentBadge status="escrowed" />
+					<div class="lightning-anim-wrap">
+						<span class="lightning-bolt-anim">⚡</span>
 					</div>
-					<button class="btn-modal-close" on:click={closeHireModal}>Got it</button>
-				</div>
-			{:else if hireResult === 'success'}
-				<div class="modal-result">
-					<span class="modal-result-icon">✅</span>
-					<h3 class="modal-result-title">Hire submitted!</h3>
-					<p class="modal-result-sub">Your task has been queued. You'll receive updates via your dashboard.</p>
-					<div class="modal-badge-row">
-						<LightningPaymentBadge status="escrowed" />
-					</div>
+					<div class="escrow-badge">Payment locked in escrow</div>
+					<h3 class="modal-result-title success-title">Job created</h3>
+					<p class="modal-result-sub">Task submitted to <strong>{hireAgentName}</strong>. Sats held in Lightning escrow — released automatically on delivery.</p>
 					<button class="btn-modal-close" on:click={closeHireModal}>Done</button>
 				</div>
 			{:else}
@@ -1425,6 +1415,53 @@
 		text-align: center;
 		gap: 12px;
 		padding: 8px 0;
+	}
+
+	.lightning-anim-wrap {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 4px;
+	}
+
+	.lightning-bolt-anim {
+		font-size: 48px;
+		display: block;
+		animation: bolt-strike 0.4s ease-out, bolt-glow 1.5s ease-in-out 0.4s infinite alternate;
+	}
+
+	@keyframes bolt-strike {
+		0% { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+		60% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+		100% { transform: scale(1) rotate(0deg); opacity: 1; }
+	}
+
+	@keyframes bolt-glow {
+		0% { filter: drop-shadow(0 0 4px rgba(247,147,26,0.6)); }
+		100% { filter: drop-shadow(0 0 14px rgba(247,147,26,1)); }
+	}
+
+	.escrow-badge {
+		display: inline-block;
+		background: rgba(247,147,26,0.12);
+		border: 1px solid rgba(247,147,26,0.35);
+		color: #f7931a;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		padding: 4px 10px;
+		border-radius: 20px;
+		margin-bottom: 8px;
+		animation: fade-in-up 0.3s ease 0.3s both;
+	}
+
+	.success-title {
+		animation: fade-in-up 0.3s ease 0.5s both;
+	}
+
+	@keyframes fade-in-up {
+		from { opacity: 0; transform: translateY(6px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 
 	.modal-result-icon {

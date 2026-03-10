@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { authStore, isLoggedIn } from '$lib/stores/auth';
-	import { MOCK_AGENTS, MOCK_HIRES } from '$lib/mockData';
+	// Mock data removed — using real API
 	import { signInWithGitHub, mapBackendUser, type GitHubUser } from '$lib/auth';
 
 	import { PUBLIC_API_URL } from '$env/static/public';
@@ -11,21 +11,9 @@
 	let user: GitHubUser | null = null;
 	let agentActive = true;
 
-	const mockStats = {
-		totalEarned: 48200,
-		jobsCompleted: 23,
-		activeListings: 1,
-		avgRating: 4.7
-	};
-
-	const recentHires = MOCK_HIRES.slice(0, 5);
-	const recentEarnings = [
-		{ date: '2026-03-06', from: '@atlas-bot', task: 'Research brief', sats: 2500 },
-		{ date: '2026-03-05', from: '@jet-ai', task: 'Competitive analysis', sats: 3200 },
-		{ date: '2026-03-04', from: '@scout-agent', task: 'Market sizing report', sats: 2500 },
-		{ date: '2026-03-03', from: '@cipher-sec', task: 'Security documentation', sats: 4000 },
-		{ date: '2026-03-02', from: '@quill-writer', task: 'Content strategy', sats: 1800 }
-	];
+	// Real job data from API
+	let recentJobs: Array<{ id: string; task_description: string; status: string; price_sats: number; created_at?: string; provider_agent_id?: string }> = [];
+	let jobsLoading = true;
 
 	onMount(async () => {
 		user = $authStore;
@@ -49,6 +37,23 @@
 			} catch {
 				// Keep stored user if backend unreachable
 			}
+
+			// Fetch real jobs
+			try {
+				const jobsRes = await fetch(`${API_URL}/jobs`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (jobsRes.ok) {
+					const data = await jobsRes.json();
+					recentJobs = (data.jobs ?? data ?? []).slice(0, 10);
+				}
+			} catch {
+				// Jobs unavailable — show empty state
+			} finally {
+				jobsLoading = false;
+			}
+		} else {
+			jobsLoading = false;
 		}
 	});
 
@@ -182,40 +187,27 @@
 						<a href="/dashboard/hires" class="section-link">View all →</a>
 					</div>
 					<div class="activity-list">
-						{#each recentHires as hire}
-							<div class="activity-item">
-								<div class="activity-info">
-									<span class="activity-name">{hire.agentName}</span>
-									<span class="activity-task">{hire.taskSummary}</span>
-								</div>
-								<div class="activity-meta">
-									<span class="activity-sats font-mono">-{hire.satsPaid.toLocaleString()} ⚡</span>
-									<span class="activity-status status-{hire.status}">{hire.status}</span>
-								</div>
+						{#if jobsLoading}
+							<div class="activity-empty">Loading jobs…</div>
+						{:else if recentJobs.length === 0}
+							<div class="activity-empty">
+								<p>No jobs yet.</p>
+								<a href="/" class="activity-cta">Hire an agent →</a>
 							</div>
-						{/each}
-					</div>
-				</section>
-
-				<!-- Recent earnings -->
-				<section class="activity-section glass-card">
-					<div class="section-header">
-						<h3 class="section-title">Recent earnings</h3>
-						<a href="/dashboard/wallet" class="section-link">Wallet →</a>
-					</div>
-					<div class="activity-list">
-						{#each recentEarnings as earning}
-							<div class="activity-item">
-								<div class="activity-info">
-									<span class="activity-name">{earning.from}</span>
-									<span class="activity-task">{earning.task}</span>
+						{:else}
+							{#each recentJobs as job}
+								<div class="activity-item">
+									<div class="activity-info">
+										<span class="activity-name">{job.provider_agent_id ?? 'Agent'}</span>
+										<span class="activity-task">{job.task_description?.slice(0, 60)}{job.task_description?.length > 60 ? '…' : ''}</span>
+									</div>
+									<div class="activity-meta">
+										<span class="activity-sats font-mono">-{job.price_sats?.toLocaleString() ?? '—'} ⚡</span>
+										<span class="activity-status status-{job.status}">{job.status}</span>
+									</div>
 								</div>
-								<div class="activity-meta">
-									<span class="activity-sats font-mono earn">+{earning.sats.toLocaleString()} ⚡</span>
-									<span class="activity-date">{formatDate(earning.date)}</span>
-								</div>
-							</div>
-						{/each}
+							{/each}
+						{/if}
 					</div>
 				</section>
 			</div>

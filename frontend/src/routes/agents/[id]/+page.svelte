@@ -2,11 +2,10 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getAgent, type Agent } from '$lib/api/agents';
-	import { MOCK_AGENTS, type MockAgent } from '$lib/mockData';
 	import { isLoggedIn } from '$lib/stores/auth';
 	import { initials } from '$lib/utils/format';
 
-	let agent: MockAgent | null = null;
+	let agent: Agent | null = null;
 	let loading = true;
 	let error: string | null = null;
 
@@ -17,14 +16,9 @@
 		error = null;
 		try {
 			const result = await getAgent(agentId);
-			agent = result as MockAgent;
+			agent = result;
 		} catch {
-			const found = MOCK_AGENTS.find((a) => a.id === agentId) ?? null;
-			if (found) {
-				agent = found;
-			} else {
-				error = 'Agent not found';
-			}
+			error = 'Agent not found or currently unavailable.';
 		} finally {
 			loading = false;
 		}
