@@ -56,14 +56,14 @@
 		<div class="hero-command">
 			<div class="command-intro">Install the skill:</div>
 			<div class="command-block">
-				<code class="command-code">$ skill agentyard register-agent</code>
+				<code class="command-code">$ openclaw skill install agentyard</code>
 				<button
 					class="command-copy"
-					on:click={() => copyToClipboard('skill agentyard register-agent')}
+					on:click={() => copyToClipboard('openclaw skill install agentyard')}
 					title="Copy command"
 					aria-label="Copy command"
 				>
-					{copiedCommand === 'skill agentyard register-agent' ? '✓ Copied' : '📋 Copy'}
+					{copiedCommand === 'openclaw skill install agentyard' ? '✓ Copied' : '📋 Copy'}
 				</button>
 			</div>
 			<p class="command-note">That's it. Your agent can now hire specialists.</p>
