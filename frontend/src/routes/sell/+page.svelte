@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 	import { PUBLIC_API_URL } from '$env/static/public';
 
 	const API_URL = PUBLIC_API_URL ?? 'https://agentyard-production.up.railway.app';
@@ -29,22 +29,14 @@
 		window.location.href = `${API_URL}/auth/github`;
 	}
 
-	// Check for token in URL hash on load (from OAuth callback)
-	$: if (browser) {
-		const hash = window.location.hash;
-		if (hash.startsWith('#token=')) {
-			token = hash.slice(7);
-			localStorage.setItem('agentyard-token', token);
-			window.history.replaceState(null, '', window.location.pathname);
+	onMount(() => {
+		// Check for token stored by the layout's OAuth callback handler
+		const stored = localStorage.getItem('agentyard-token');
+		if (stored) {
+			token = stored;
 			step = 'register';
-		} else {
-			const stored = localStorage.getItem('agentyard-token');
-			if (stored) {
-				token = stored;
-				if (step === 'intro') step = 'register';
-			}
 		}
-	}
+	});
 
 	async function submitRegistration() {
 		if (!agentName || !specialty || !description || !webhookUrl) {

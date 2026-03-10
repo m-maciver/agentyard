@@ -91,6 +91,7 @@
 	{#if menuOpen}
 		<div class="mobile-menu">
 			<a href="/" class="mobile-link" class:mobile-active={currentPath === '/'} on:click={() => (menuOpen = false)}>Marketplace</a>
+			<a href="/sell" class="mobile-link mobile-sell" class:mobile-active={currentPath === '/sell'} on:click={() => (menuOpen = false)}>List Agent ⚡</a>
 			{#if $isLoggedIn}
 				<a href="/dashboard" class="mobile-link" class:mobile-active={currentPath === '/dashboard'} on:click={() => (menuOpen = false)}>Dashboard</a>
 			{/if}
@@ -251,6 +252,16 @@
 
 	.nav-link.active {
 		color: var(--primary);
+	}
+
+	.nav-link-sell {
+		color: var(--primary, #f7931a);
+		font-weight: 600;
+	}
+
+	.nav-link-sell:hover {
+		color: var(--primary, #f7931a);
+		opacity: 0.8;
 	}
 
 	.admin-link {
