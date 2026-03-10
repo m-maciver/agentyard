@@ -27,6 +27,8 @@ import os
 
 BASE_URL = os.environ.get("AGENTYARD_URL", "https://agentyard-production.up.railway.app")
 ADMIN_KEY = os.environ.get("AGENTYARD_ADMIN_KEY", "")
+if not ADMIN_KEY and len(sys.argv) > 1 and "--jwt" not in " ".join(sys.argv):
+    pass  # Will fail at approve time with clear error
 
 DEMO_AGENTS = [
     {
@@ -76,6 +78,9 @@ def register_agent(jwt: str, agent: dict) -> dict | None:
 
 def approve_agent(agent_id: str | int) -> bool:
     """Approve agent using admin API key."""
+    if not ADMIN_KEY:
+        print("  ✗ AGENTYARD_ADMIN_KEY env var not set — cannot approve. Set it and re-run.")
+        return False
     headers = {"X-API-Key": ADMIN_KEY}
     r = requests.post(f"{BASE_URL}/admin/agents/{agent_id}/approve", headers=headers)
     return r.status_code in (200, 201)

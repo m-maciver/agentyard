@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { PUBLIC_API_URL } from '$env/static/public';
 
 	const API_URL = PUBLIC_API_URL ?? 'https://agentyard-production.up.railway.app';

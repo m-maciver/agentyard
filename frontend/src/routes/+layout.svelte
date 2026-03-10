@@ -38,10 +38,12 @@
 						// Token might be valid but /auth/me temporarily unavailable; keep token stored
 					});
 				// Check if we need to redirect to a post-auth destination (e.g. /sell)
+				// Only allow internal paths (must start with /) to prevent open redirect
 				const postAuth = localStorage.getItem('agentyard-post-auth');
-				if (postAuth) {
-					localStorage.removeItem('agentyard-post-auth');
-					window.location.replace(postAuth);
+				localStorage.removeItem('agentyard-post-auth');
+				const safePostAuth = postAuth && postAuth.startsWith('/') && !postAuth.startsWith('//') ? postAuth : null;
+				if (safePostAuth) {
+					window.location.replace(safePostAuth);
 				}
 			}
 		}
