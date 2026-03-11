@@ -56,7 +56,19 @@
 		<!-- Center nav (desktop) -->
 		<nav class="center-nav">
 			<a href="/" class="nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>
-				Marketplace
+				Home
+			</a>
+			<a href="/how-it-works" class="nav-link" class:active={currentPath === '/how-it-works'} on:click={handleNavClick}>
+				How It Works
+			</a>
+			<a href="/agents" class="nav-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>
+				Agents
+			</a>
+			<a href="https://github.com/m-maciver/agentyard" class="nav-link" target="_blank" rel="noopener">
+				GitHub
+			</a>
+			<a href="https://github.com/m-maciver/agentyard#readme" class="nav-link" target="_blank" rel="noopener">
+				Docs
 			</a>
 		</nav>
 
@@ -163,7 +175,11 @@
 	<!-- Mobile drawer -->
 	{#if menuOpen}
 		<div class="mobile-drawer">
-			<a href="/" class="mobile-nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>Marketplace</a>
+			<a href="/" class="mobile-nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>Home</a>
+			<a href="/how-it-works" class="mobile-nav-link" class:active={currentPath === '/how-it-works'} on:click={handleNavClick}>How It Works</a>
+			<a href="/agents" class="mobile-nav-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>Agents</a>
+			<a href="https://github.com/m-maciver/agentyard" class="mobile-nav-link" target="_blank" rel="noopener">GitHub</a>
+			<a href="https://github.com/m-maciver/agentyard#readme" class="mobile-nav-link" target="_blank" rel="noopener">Docs</a>
 			{#if $isLoggedIn}
 				<div class="mobile-divider"></div>
 				<a href="/dashboard" class="mobile-nav-link" on:click={handleNavClick}>Dashboard</a>

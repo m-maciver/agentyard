@@ -108,13 +108,13 @@
 	<title>Agent Directory — AgentYard</title>
 </svelte:head>
 
-<!-- ═══ HEADER ═══ -->
-<div class="header">
-	<div class="header-content">
-		<h1 class="title">Agent Directory</h1>
-		<p class="subtitle">Browse available agents. Click on any agent to view their full profile.</p>
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+	<div class="hero-container">
+		<h1 class="hero-title">Available Specialists</h1>
+		<p class="hero-subtitle">Browse and hire from the global network. Sorted by reputation, price, and availability.</p>
 	</div>
-</div>
+</section>
 
 <!-- ═══ AGENTS TABLE ═══ -->
 <div class="directory-section">
@@ -200,38 +200,59 @@
 </div>
 
 <style>
-	/* ═══ HEADER ═══ */
-	.header {
+	/* ═══ HERO ═══ */
+	.hero {
+		position: relative;
 		background: var(--bg-base);
 		border-bottom: 1px solid var(--glass-border);
-		padding: 2rem;
+		padding: 3rem 2rem;
+		overflow: hidden;
+		min-height: 35vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.header-content {
-		max-width: 1400px;
-		margin: 0 auto;
+	.hero::before {
+		content: '';
+		position: absolute;
+		top: -40%;
+		right: -20%;
+		width: 500px;
+		height: 500px;
+		background: radial-gradient(ellipse, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+		border-radius: 50%;
+		filter: blur(60px);
+		pointer-events: none;
 	}
 
-	.title {
-		font-size: 2rem;
+	.hero-container {
+		position: relative;
+		z-index: 1;
+		text-align: center;
+		max-width: 800px;
+	}
+
+	.hero-title {
+		font-size: 2.75rem;
 		font-weight: 700;
 		color: var(--text-primary);
-		margin: 0 0 0.5rem;
-		font-family: var(--font-mono);
-		letter-spacing: -0.01em;
+		margin: 0 0 1rem;
+		letter-spacing: -0.02em;
 	}
 
-	.subtitle {
-		font-size: 0.9rem;
+	.hero-subtitle {
+		font-size: 1rem;
 		color: var(--text-secondary);
 		margin: 0;
-		font-family: var(--font-sans);
+		line-height: 1.6;
 	}
 
 	/* ═══ DIRECTORY ═══ */
 	.directory-section {
 		background: var(--bg-surface);
-		padding: 2rem;
+		border-bottom: 1px solid var(--glass-border);
+		padding: 3rem 2rem;
 		min-height: 500px;
 	}
 
@@ -239,22 +260,26 @@
 		max-width: 1400px;
 		margin: 0 auto;
 		border: 1px solid var(--glass-border);
-		border-radius: 12px;
+		border-radius: 16px;
 		overflow: hidden;
+		background: var(--glass-bg);
+		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 	}
 
 	.table-header {
 		display: grid;
 		grid-template-columns: 1.5fr 1.2fr 1fr 1fr 1fr 1fr 1fr;
 		gap: 1rem;
-		padding: 1rem 1.5rem;
-		background: var(--bg-elevated);
+		padding: 1.25rem 1.5rem;
+		background: rgba(255, 255, 255, 0.02);
 		border-bottom: 1px solid var(--glass-border);
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--text-muted);
-		letter-spacing: 0.05em;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 
@@ -286,10 +311,11 @@
 		display: grid;
 		grid-template-columns: 1.5fr 1.2fr 1fr 1fr 1fr 1fr 1fr;
 		gap: 1rem;
-		padding: 1rem 1.5rem;
+		padding: 1.1rem 1.5rem;
 		border-bottom: 1px solid var(--glass-border);
 		align-items: center;
-		transition: background 0.15s ease;
+		transition: all 0.2s ease;
+		cursor: pointer;
 	}
 
 	.table-row:last-child {
@@ -297,7 +323,7 @@
 	}
 
 	.table-row:hover {
-		background: var(--glass-hover);
+		background: rgba(255, 255, 255, 0.04);
 	}
 
 	.col-name {
@@ -307,12 +333,12 @@
 	}
 
 	.agent-avatar {
-		width: 36px;
-		height: 36px;
-		border-radius: 6px;
-		background: var(--accent-subtle);
+		width: 40px;
+		height: 40px;
+		border-radius: 8px;
+		background: linear-gradient(135deg, var(--accent-primary), #a855f7);
 		border: 1px solid var(--accent-border);
-		color: var(--accent-violet);
+		color: #ffffff;
 		font-family: var(--font-mono);
 		font-weight: 700;
 		font-size: 16px;
@@ -387,20 +413,22 @@
 		background: transparent;
 		border: 1px solid var(--glass-border);
 		color: var(--text-secondary);
-		font-family: var(--font-mono);
-		font-size: 0.8rem;
+		font-family: var(--font-sans);
+		font-size: 0.85rem;
 		font-weight: 600;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
+		padding: 0.6rem 1.2rem;
+		border-radius: 8px;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 0.2s ease;
 		white-space: nowrap;
+		letter-spacing: 0.01em;
 	}
 
 	.btn-profile:hover {
 		border-color: var(--accent-border);
-		color: var(--accent-violet);
-		background: var(--glass-hover);
+		color: var(--accent-primary);
+		background: rgba(255, 255, 255, 0.05);
+		transform: translateY(-1px);
 	}
 
 	/* ─── States ─── */
@@ -424,11 +452,15 @@
 
 	/* ─── Responsive ─── */
 	@media (max-width: 1024px) {
+		.hero-title {
+			font-size: 2rem;
+		}
+
 		.table-header,
 		.table-row {
 			grid-template-columns: 1.2fr 0.9fr 0.8fr 0.8fr 0.8fr;
 			gap: 0.75rem;
-			padding: 0.75rem 1rem;
+			padding: 0.85rem 1rem;
 		}
 
 		.col-specialty,
@@ -438,11 +470,28 @@
 	}
 
 	@media (max-width: 640px) {
+		.hero {
+			padding: 2rem 1.5rem;
+			min-height: 30vh;
+		}
+
+		.hero-title {
+			font-size: 1.75rem;
+		}
+
+		.hero-subtitle {
+			font-size: 0.95rem;
+		}
+
+		.directory-section {
+			padding: 1.5rem 1rem;
+		}
+
 		.table-header,
 		.table-row {
 			grid-template-columns: 1fr;
 			gap: 0.5rem;
-			padding: 0.5rem;
+			padding: 0.75rem;
 		}
 
 		.col-specialty,
