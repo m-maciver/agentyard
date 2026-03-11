@@ -3,8 +3,7 @@
 	import { onMount } from 'svelte';
 	import { authStore, isLoggedIn } from '$lib/stores/auth';
 	import { signInWithGitHub, mapBackendUser, type GitHubUser } from '$lib/auth';
-	import CountdownTimer from '$lib/components/CountdownTimer.svelte';
-	import EscrowWindow from '$lib/components/EscrowWindow.svelte';
+
 	import { PUBLIC_API_URL } from '$env/static/public';
 
 	const API_URL = PUBLIC_API_URL || 'https://agentyard-production.up.railway.app';
@@ -86,25 +85,8 @@
 		}
 	}
 
-	function handleAcceptJob(jobId: string) {
-		// TODO: Call API to accept job
-		console.log('Accept job:', jobId);
-	}
-
-	function handleDisputeJob(jobId: string) {
-		// TODO: Call API to dispute job
-		console.log('Dispute job:', jobId);
-	}
-
 	function toggleExpanded(jobId: string) {
 		expandedJobId = expandedJobId === jobId ? null : jobId;
-	}
-
-	function isWithinEscrowWindow(createdAt: string, windowMinutes: number = 10): boolean {
-		const now = new Date();
-		const created = new Date(createdAt);
-		const diff = now.getTime() - created.getTime();
-		return diff < windowMinutes * 60 * 1000;
 	}
 
 	$: user = $authStore;
@@ -255,9 +237,7 @@
 				{:else}
 					<div class="feed-timeline">
 						{#each recentJobs as job (job.id)}
-							{@const isEscrow = ['escrowed', 'in_progress'].includes(job.status)}
-							{@const withinWindow = isWithinEscrowWindow(job.created_at)}
-							<div class="feed-card glass-card" class:escrow-active={isEscrow && withinWindow}>
+							<div class="feed-card glass-card">
 								<div class="card-timeline-marker"></div>
 
 								<!-- Card header -->
@@ -280,18 +260,6 @@
 									<span class="status-badge status-{job.status}">{job.status}</span>
 									<span class="cost-sats font-mono">⚡ {job.price_sats.toLocaleString()} sats</span>
 								</div>
-
-								<!-- Escrow window (if active) -->
-								{#if isEscrow && withinWindow}
-									<div class="card-escrow-section">
-										<CountdownTimer
-											createdAt={job.created_at}
-											windowMinutes={10}
-											onExpire={() => console.log('Escrow window expired for', job.id)}
-										/>
-										<EscrowWindow priceInSats={job.price_sats} platformFeePercent={0.12} />
-									</div>
-								{/if}
 
 								<!-- Expandable details -->
 								<button
@@ -321,20 +289,8 @@
 										</div>
 										<div class="detail-row">
 											<span class="detail-key">Payment:</span>
-											<span class="detail-val font-mono">⚡ {job.price_sats.toLocaleString()} + {job.fee_sats?.toLocaleString() ?? 0} fee</span>
+											<span class="detail-val font-mono">⚡ {job.price_sats.toLocaleString()}</span>
 										</div>
-									</div>
-								{/if}
-
-								<!-- Action buttons (if within escrow window) -->
-								{#if isEscrow && withinWindow}
-									<div class="card-actions">
-										<button class="btn-action btn-accept" on:click={() => handleAcceptJob(job.id)}>
-											✓ Accept delivery
-										</button>
-										<button class="btn-action btn-dispute" on:click={() => handleDisputeJob(job.id)}>
-											⚠ Dispute
-										</button>
 									</div>
 								{/if}
 							</div>
