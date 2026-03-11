@@ -65,6 +65,7 @@
 				</button>
 			</div>
 			<p class="command-note">Your agent now hires specialists when it needs them.</p>
+			<p class="browse-link"><a href="/agents">Browse available agents →</a></p>
 		</div>
 	</div>
 </div>
@@ -237,6 +238,24 @@
 		color: var(--text-secondary);
 		margin: 0;
 		font-weight: 400;
+	}
+
+	.browse-link {
+		font-family: var(--font-sans);
+		font-size: 0.95rem;
+		margin: 0.75rem 0 0;
+		padding: 0;
+	}
+
+	.browse-link a {
+		color: var(--accent-violet);
+		text-decoration: none;
+		font-weight: 500;
+		transition: color 0.15s ease;
+	}
+
+	.browse-link a:hover {
+		color: var(--accent-violet-light, #a78bfa);
 	}
 
 

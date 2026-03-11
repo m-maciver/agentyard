@@ -1,305 +1,268 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { getAgent, type Agent } from '$lib/api/agents';
-	import { isLoggedIn } from '$lib/stores/auth';
-	import { initials } from '$lib/utils/format';
+	import { onMount } from 'svelte';
+	import { MOCK_AGENTS, type MockAgent } from '$lib/mockData';
 
-	let agent: Agent | null = null;
+	let agent: (MockAgent & { hireCount?: number; successRate?: number; jobHistory?: any[] }) | null =
+		null;
 	let loading = true;
-	let error: string | null = null;
 
-	$: agentId = $page.params.id;
-
-	async function loadAgent() {
-		loading = true;
-		error = null;
-		try {
-			const result = await getAgent(agentId);
-			agent = result;
-		} catch {
-			error = 'Agent not found or currently unavailable.';
-		} finally {
-			loading = false;
-		}
+	interface Job {
+		id: string;
+		title: string;
+		clientName: string;
+		completedAt: string;
+		outcome: 'completed' | 'disputed';
+		rating: number;
 	}
 
-	$: reputationStars = agent ? (agent.reputationStars ?? parseFloat((agent.reputation_score / 20).toFixed(1))) : 0;
+	const mockJobHistory: Job[] = [
+		{
+			id: '1',
+			title: 'Design landing page',
+			clientName: 'TechStartup Inc',
+			completedAt: '2026-03-10',
+			outcome: 'completed',
+			rating: 5
+		},
+		{
+			id: '2',
+			title: 'Build API endpoint',
+			clientName: 'CloudFlow Ltd',
+			completedAt: '2026-03-08',
+			outcome: 'completed',
+			rating: 5
+		},
+		{
+			id: '3',
+			title: 'Write documentation',
+			clientName: 'DevTeam Pro',
+			completedAt: '2026-03-05',
+			outcome: 'completed',
+			rating: 4
+		},
+		{
+			id: '4',
+			title: 'Code review',
+			clientName: 'OpenSource Labs',
+			completedAt: '2026-02-28',
+			outcome: 'completed',
+			rating: 5
+		},
+		{
+			id: '5',
+			title: 'System architecture',
+			clientName: 'ScaleUp Co',
+			completedAt: '2026-02-25',
+			outcome: 'completed',
+			rating: 4
+		}
+	];
 
-	function renderStarsFull(score: number): { full: number; empty: number } {
-		return { full: Math.round(score), empty: 5 - Math.round(score) };
+	function loadAgent() {
+		const agentId = $page.params.id;
+		const foundAgent = MOCK_AGENTS.find((a) => a.id === agentId);
+
+		if (foundAgent) {
+			agent = {
+				...foundAgent,
+				hireCount: Math.floor(Math.random() * 50) + 5,
+				successRate: Math.floor(Math.random() * 25) + 80,
+				jobHistory: mockJobHistory.slice(0, 5)
+			};
+		}
+
+		loading = false;
+	}
+
+	function starsFromScore(score: number): number {
+		return Math.round((score / 20) * 10) / 10;
+	}
+
+	function renderStars(rating: number): string {
+		return '★'.repeat(rating) + '☆'.repeat(5 - rating);
 	}
 
 	onMount(loadAgent);
 </script>
 
 <svelte:head>
-	<title>{agent?.name ?? 'Agent'} — AgentYard</title>
+	{#if agent}
+		<title>{agent.name} — AgentYard</title>
+	{:else}
+		<title>Agent Profile — AgentYard</title>
+	{/if}
 </svelte:head>
 
 {#if loading}
-	<div class="loading-wrap">
-		<div class="loading-content">
-			<div class="skeleton" style="width:80px;height:80px;border-radius:16px;"></div>
-			<div>
-				<div class="skeleton" style="width:200px;height:28px;"></div>
-				<div class="skeleton" style="width:140px;height:16px;margin-top:10px;"></div>
-			</div>
-		</div>
+	<div class="loading-state">
+		<p>Loading agent profile...</p>
 	</div>
-{:else if error || !agent}
-	<div class="error-wrap">
-		<h2>Agent not found</h2>
-		<p>{error ?? 'This agent may no longer be active.'}</p>
-		<a href="/" class="btn-ghost">← Back to marketplace</a>
+{:else if !agent}
+	<div class="error-state">
+		<p>Agent not found.</p>
+		<a href="/agents" class="back-link">← Back to Directory</a>
 	</div>
 {:else}
-	<!-- Hero -->
-	<section class="agent-hero">
-		<div class="hero-bg"></div>
-		<div class="hero-inner">
-			<a href="/" class="breadcrumb">← Marketplace</a>
-			<div class="hero-content">
-				<div class="agent-avatar-lg">
-					{agent.name[0]}
-				</div>
-				<div class="hero-info">
-					<div class="name-row">
-						<h1 class="agent-name">{agent.name}</h1>
-						{#if agent.is_verified}
-							<span class="verified-tag">✓ Verified</span>
-						{/if}
-						{#if agent.githubUsername}
-							<span class="github-handle">{agent.githubUsername}</span>
-						{/if}
+	<!-- ═══ PROFILE HEADER ═══ -->
+	<div class="profile-header">
+		<a href="/agents" class="back-link">← Back to Directory</a>
+
+		<div class="profile-hero">
+			<div class="avatar-large">{agent.name[0]}</div>
+			<div class="hero-info">
+				<h1 class="agent-title">{agent.name}</h1>
+				<p class="agent-specialty">{agent.specialty}</p>
+
+				<div class="stats-grid">
+					<div class="stat-item">
+						<div class="stat-value">
+							{@const stars = agent.reputationStars ?? starsFromScore(agent.reputation_score)}
+							<span class="stars">{stars.toFixed(1)} ★</span>
+						</div>
+						<div class="stat-label">JSS Score</div>
 					</div>
 
-					{#if agent.tags && agent.tags.length > 0}
-						<div class="tag-row">
-							{#each agent.tags as tag}
-								<span class="tag-pill">{tag}</span>
-							{/each}
+					<div class="stat-item">
+						<div class="stat-value">
+							<code class="price-large">⚡ {agent.price_per_task_sats.toLocaleString()}</code>
 						</div>
-					{/if}
+						<div class="stat-label">Price (sats)</div>
+					</div>
 
-					<div class="hero-stats">
-						<div class="hero-stat">
-							<span class="stat-val font-mono">{agent.jobs_completed}</span>
-							<span class="stat-lbl">jobs</span>
-						</div>
-						<div class="stat-sep"></div>
-						<div class="hero-stat">
-							<span class="stat-val font-mono">{reputationStars.toFixed(1)}</span>
-							<span class="stat-lbl">★ rating</span>
-						</div>
-						<div class="stat-sep"></div>
-						<div class="hero-stat">
-							<span class="stat-val font-mono">
-								{agent.jobs_disputed > 0 ? ((agent.jobs_won / agent.jobs_disputed) * 100).toFixed(0) : '100'}%
-							</span>
-							<span class="stat-lbl">dispute win</span>
-						</div>
-						<div class="stat-sep"></div>
-						<div class="hero-stat">
-							<span class="stat-val font-mono">~4.2m</span>
-							<span class="stat-lbl">avg delivery</span>
-						</div>
+					<div class="stat-item">
+						<div class="stat-value">{agent.hireCount || 0}</div>
+						<div class="stat-label">Times Hired</div>
+					</div>
+
+					<div class="stat-item">
+						<div class="stat-value">{agent.successRate || 75}%</div>
+						<div class="stat-label">Success Rate</div>
 					</div>
 				</div>
 			</div>
 		</div>
-	</section>
+	</div>
 
-	<!-- Content -->
-	<div class="content-wrap">
-		<div class="content-grid">
-			<!-- Left (2/3) -->
-			<div class="left-col">
-				<!-- About -->
-				<section class="content-section glass-card">
-					<h2 class="section-title">About this agent</h2>
-					<blockquote class="soul-block">
-						{#each agent.soul_excerpt.split('\n\n') as para}
-							<p>{para}</p>
-						{/each}
-					</blockquote>
-				</section>
+	<!-- ═══ DESCRIPTION ═══ -->
+	<div class="profile-section">
+		<h2 class="section-title">About</h2>
+		<p class="description">
+			{agent.description ||
+				`${agent.name} is a skilled professional specializing in ${agent.specialty}. With a proven track record of successful deliverables and positive client feedback, ${agent.name} is ready to help with your project needs.`}
+		</p>
+	</div>
 
-				<!-- Capabilities -->
-				{#if agent.skills_config && Object.keys(agent.skills_config).length > 0}
-					<section class="content-section glass-card">
-						<h2 class="section-title">Capabilities</h2>
-						<div class="cap-chips">
-							{#each Object.entries(agent.skills_config) as [, v]}
-								{#if Array.isArray(v)}
-									{#each v as item}
-										<span class="cap-chip">{item}</span>
-									{/each}
-								{/if}
-							{/each}
+	<!-- ═══ SKILLS ═══ -->
+	<div class="profile-section">
+		<h2 class="section-title">Skills & Expertise</h2>
+		<div class="skills-list">
+			{#each agent.specialty.split(',') as skill}
+				<span class="skill-badge">{skill.trim()}</span>
+			{/each}
+		</div>
+	</div>
+
+	<!-- ═══ JOB HISTORY ═══ -->
+	<div class="profile-section">
+		<h2 class="section-title">Recent Job History</h2>
+
+		{#if agent.jobHistory && agent.jobHistory.length > 0}
+			<div class="job-history">
+				{#each agent.jobHistory as job (job.id)}
+					<div class="job-card">
+						<div class="job-header">
+							<h3 class="job-title">{job.title}</h3>
+							<span class="job-outcome outcome-{job.outcome}">
+								{job.outcome === 'completed' ? '✓ Completed' : '⚠ Disputed'}
+							</span>
 						</div>
-					</section>
-				{/if}
 
-				<!-- Sample work -->
-				{#if agent.sample_outputs.length > 0}
-					<section class="content-section glass-card">
-						<h2 class="section-title">Example tasks</h2>
-						<div class="sample-list">
-							{#each agent.sample_outputs as sample, i}
-								<div class="sample-item">
-									<span class="sample-num font-mono">0{i + 1}</span>
-									<p class="sample-text">{sample}</p>
-								</div>
-							{/each}
+						<p class="job-client">Client: <strong>{job.clientName}</strong></p>
+						<p class="job-date">{new Date(job.completedAt).toLocaleDateString('en-US', {
+								year: 'numeric',
+								month: 'short',
+								day: 'numeric'
+							})}</p>
+
+						<div class="job-rating">
+							<span class="stars-rating">{renderStars(job.rating)}</span>
+							<span class="rating-number">{job.rating}/5</span>
 						</div>
-					</section>
-				{/if}
-
-				<!-- Recent jobs -->
-				<section class="content-section glass-card">
-					<h2 class="section-title">Recent job history</h2>
-					<div class="job-history">
-						{#each Array(5) as _, i}
-							<div class="job-item">
-								<div class="job-item-left">
-									<div class="job-avatar">A</div>
-									<div>
-										<span class="job-client">Anonymous client</span>
-										<span class="job-task">Completed task successfully · {i + 1}d ago</span>
-									</div>
-								</div>
-								<span class="job-result success">✓ Completed</span>
-							</div>
-						{/each}
 					</div>
-				</section>
+				{/each}
 			</div>
+		{:else}
+			<p class="no-history">No job history yet.</p>
+		{/if}
+	</div>
 
-			<!-- Right (1/3) — sticky hire card -->
-			<aside class="hire-panel">
-				<div class="hire-panel-inner glass-card">
-					<div class="price-row">
-						<span class="price font-mono">⚡ {agent.price_per_task_sats.toLocaleString()}</span>
-						<span class="price-unit">sats / job</span>
-					</div>
-
-					<div class="rating-row">
-						<div class="stars">
-							{#each Array(5) as _, i}
-								<span class="star" class:filled={i < Math.round(reputationStars)}>★</span>
-							{/each}
-						</div>
-						<span class="rating-text">{reputationStars.toFixed(1)} / 5.0 · {agent.jobs_completed} jobs</span>
-					</div>
-
-					<div class="panel-stats">
-						<div class="panel-stat">
-							<span class="panel-stat-label">Total jobs</span>
-							<span class="panel-stat-value font-mono">{agent.jobs_completed}</span>
-						</div>
-						<div class="panel-stat">
-							<span class="panel-stat-label">Avg delivery</span>
-							<span class="panel-stat-value font-mono">~4.2 min</span>
-						</div>
-						<div class="panel-stat">
-							<span class="panel-stat-label">Max job size</span>
-							<span class="panel-stat-value font-mono">{(agent.max_job_sats / 1000).toFixed(0)}k sats</span>
-						</div>
-					</div>
-
-					<div class="panel-divider"></div>
-
-					{#if $isLoggedIn}
-						<button class="hire-cta-btn" on:click={() => alert('Hire flow coming — backend in progress!')}>
-							⚡ Hire {agent.name}
-						</button>
-					{:else}
-						<a href="/auth/github" class="hire-cta-btn hire-cta-github">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-								<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-							</svg>
-							Sign in with GitHub to hire
-						</a>
-					{/if}
-
-					<p class="panel-hint">Payment via Lightning Network · Instant settlement · Funds held in escrow until delivery</p>
-				</div>
-			</aside>
+	<!-- ═══ HIRE SECTION ═══ -->
+	<div class="hire-section">
+		<div class="hire-content">
+			<h2>Ready to hire?</h2>
+			<p>Contact {agent.name} to start your next project.</p>
+			<button class="btn-hire-large" on:click={() => window.history.back()}>
+				← Back to Directory
+			</button>
 		</div>
 	</div>
 {/if}
 
 <style>
-	.loading-wrap, .error-wrap {
-		max-width: 960px;
-		margin: 80px auto;
-		padding: 0 24px;
-	}
-
-	.loading-content {
+	/* ═══ LOADING & ERROR ═══ */
+	.loading-state,
+	.error-state {
+		padding: 4rem 2rem;
+		text-align: center;
+		color: var(--text-muted);
+		font-family: var(--font-sans);
+		min-height: 400px;
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		gap: 24px;
+		justify-content: center;
 	}
 
-	.error-wrap h2 {
-		font-family: 'DM Sans', sans-serif;
-		font-weight: 700;
-		font-size: 28px;
+	.back-link {
+		color: var(--accent-violet);
+		text-decoration: none;
+		font-weight: 500;
+		transition: color 0.15s ease;
+		display: inline-block;
+		margin-bottom: 1rem;
+	}
+
+	.back-link:hover {
 		color: var(--text-primary);
-		margin: 0 0 12px;
 	}
 
-	.error-wrap p {
-		color: var(--text-secondary);
-		margin: 0 0 24px;
-	}
-
-	/* Hero */
-	.agent-hero {
-		position: relative;
-		overflow: hidden;
+	/* ═══ PROFILE HEADER ═══ */
+	.profile-header {
 		background: var(--bg-base);
 		border-bottom: 1px solid var(--glass-border);
-		padding: 60px 24px;
+		padding: 2rem;
 	}
 
-	.hero-inner {
-		max-width: 1100px;
-		margin: 0 auto;
-		position: relative;
-		z-index: 1;
+	.profile-hero {
+		max-width: 1200px;
+		margin: 1.5rem auto 0;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 2rem;
+		align-items: start;
 	}
 
-	.breadcrumb {
-		display: inline-block;
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--accent-primary);
-		text-decoration: none;
-		margin-bottom: 28px;
-		transition: opacity 0.15s;
-	}
-
-	.breadcrumb:hover { opacity: 0.8; }
-
-	.hero-content {
-		display: flex;
-		gap: 28px;
-		align-items: flex-start;
-	}
-
-	.agent-avatar-lg {
-		width: 80px;
-		height: 80px;
-		border-radius: 20px;
+	.avatar-large {
+		width: 120px;
+		height: 120px;
+		border-radius: 12px;
 		background: var(--accent-subtle);
-		border: 1px solid var(--accent-border);
+		border: 2px solid var(--accent-border);
 		color: var(--accent-violet);
-		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
+		font-family: var(--font-mono);
 		font-weight: 700;
-		font-size: 36px;
+		font-size: 48px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -310,403 +273,286 @@
 		flex: 1;
 	}
 
-	.name-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		flex-wrap: wrap;
-		margin-bottom: 12px;
-	}
-
-	.agent-name {
-		font-family: 'DM Sans', sans-serif;
+	.agent-title {
+		font-size: 2.5rem;
 		font-weight: 700;
-		font-size: 32px;
 		color: var(--text-primary);
-		margin: 0;
+		margin: 0 0 0.25rem;
+		font-family: var(--font-mono);
 		letter-spacing: -0.01em;
 	}
 
-	.verified-tag {
-		background: rgba(34, 197, 94, 0.12);
-		color: #22c55e;
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		font-weight: 600;
-		padding: 4px 12px;
-		border-radius: 9999px;
-	}
-
-	.github-handle {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--text-muted);
-	}
-
-	.tag-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-		margin-bottom: 20px;
-	}
-
-	.tag-pill {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		padding: 4px 12px;
-		background: var(--glass-bg);
-		border: 1px solid var(--glass-border);
-		border-radius: 9999px;
+	.agent-specialty {
+		font-size: 1.1rem;
 		color: var(--text-secondary);
+		margin: 0 0 1.5rem;
+		font-family: var(--font-sans);
 	}
 
-	.hero-stats {
-		display: flex;
-		align-items: center;
-		gap: 24px;
-		flex-wrap: wrap;
-	}
-
-	.hero-stat {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.stat-val {
-		font-size: 20px;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.stat-lbl {
-		font-family: 'Inter', sans-serif;
-		font-size: 11px;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	.stat-sep {
-		width: 1px;
-		height: 30px;
-		background: var(--glass-border);
-	}
-
-	/* Content */
-	.content-wrap {
-		max-width: 1100px;
-		margin: 0 auto;
-		padding: 48px 24px 80px;
-	}
-
-	.content-grid {
+	/* ─── Stats Grid ─── */
+	.stats-grid {
 		display: grid;
-		grid-template-columns: 1fr 300px;
-		gap: 32px;
-		align-items: start;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 1.5rem;
 	}
 
-	.left-col {
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
+	.stat-item {
+		text-align: center;
 	}
 
-	.content-section {
-		padding: 28px;
-	}
-
-	.section-title {
-		font-family: 'DM Sans', sans-serif;
-		font-weight: 600;
-		font-size: 14px;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		margin: 0 0 20px;
-	}
-
-	.soul-block {
-		border-left: 2px solid var(--accent-primary);
-		padding-left: 16px;
-		margin: 0;
-		background: linear-gradient(90deg, var(--accent-subtle) 0%, transparent 100%);
-		border-radius: 0 8px 8px 0;
-		padding: 12px 16px;
-	}
-
-	.soul-block p {
-		font-family: 'Inter', sans-serif;
-		font-size: 15px;
-		color: var(--text-primary);
-		line-height: 1.7;
-		margin: 0 0 12px;
-	}
-
-	.soul-block p:last-child { margin-bottom: 0; }
-
-	.cap-chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-	}
-
-	.cap-chip {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		padding: 5px 12px;
-		background: var(--glass-bg);
-		border: 1px solid var(--glass-border);
-		border-radius: 6px;
-		color: var(--text-secondary);
-	}
-
-	.sample-list {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-
-	.sample-item {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		padding: 12px 16px;
-		background: var(--bg-elevated);
-		border-radius: 10px;
-	}
-
-	.sample-num {
-		font-size: 11px;
-		color: var(--accent-primary);
-		font-weight: 500;
-		flex-shrink: 0;
-	}
-
-	.sample-text {
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-		color: var(--text-secondary);
-		margin: 0;
-	}
-
-	/* Job history */
-	.job-history {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-
-	.job-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 12px 0;
-		border-bottom: 1px solid var(--glass-border);
-	}
-
-	.job-item:last-child { border-bottom: none; }
-
-	.job-item-left {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.job-avatar {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		background: var(--bg-elevated);
-		color: var(--text-muted);
-		font-family: 'DM Sans', sans-serif;
-		font-size: 12px;
+	.stat-value {
+		font-size: 1.5rem;
 		font-weight: 700;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.job-client {
-		display: block;
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
 		color: var(--text-primary);
-		font-weight: 500;
-	}
-
-	.job-task {
-		display: block;
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-top: 1px;
-	}
-
-	.job-result {
-		font-family: 'Inter', sans-serif;
-		font-size: 12px;
-		padding: 3px 10px;
-		border-radius: 9999px;
-		font-weight: 500;
-		flex-shrink: 0;
-	}
-
-	.job-result.success {
-		background: rgba(34, 197, 94, 0.1);
-		color: #22c55e;
-	}
-
-	/* Hire panel */
-	.hire-panel {
-		position: sticky;
-		top: 80px;
-	}
-
-	.hire-panel-inner {
-		padding: 28px;
-	}
-
-	.price-row {
-		display: flex;
-		align-items: baseline;
-		gap: 8px;
-		margin-bottom: 16px;
-	}
-
-	.price {
-		font-size: 24px;
-		font-weight: 600;
-		color: var(--sats-color);
-	}
-
-	.price-unit {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--text-muted);
-	}
-
-	.rating-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin-bottom: 20px;
+		margin-bottom: 0.25rem;
+		font-family: var(--font-mono);
 	}
 
 	.stars {
-		display: flex;
-		gap: 2px;
+		color: var(--accent-violet);
 	}
 
-	.star {
-		font-size: 14px;
-		color: var(--text-muted);
-	}
-
-	.star.filled {
+	.price-large {
 		color: var(--sats-color);
 	}
 
-	.rating-text {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
-		color: var(--text-secondary);
-	}
-
-	.panel-stats {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		margin-bottom: 20px;
-	}
-
-	.panel-stat {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.panel-stat-label {
-		font-family: 'Inter', sans-serif;
-		font-size: 13px;
+	.stat-label {
+		font-size: 0.8rem;
 		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-family: var(--font-mono);
+		font-weight: 600;
 	}
 
-	.panel-stat-value {
-		font-size: 14px;
+	/* ═══ SECTIONS ═══ */
+	.profile-section {
+		max-width: 1200px;
+		margin: 2rem auto;
+		padding: 0 2rem;
+	}
+
+	.section-title {
+		font-size: 1.5rem;
+		font-weight: 700;
 		color: var(--text-primary);
+		margin: 0 0 1.5rem;
+		font-family: var(--font-mono);
+		letter-spacing: -0.01em;
+	}
+
+	.description {
+		font-size: 1rem;
+		color: var(--text-secondary);
+		line-height: 1.6;
+		margin: 0;
+		font-family: var(--font-sans);
+	}
+
+	/* ─── Skills ─── */
+	.skills-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.skill-badge {
+		background: var(--accent-subtle);
+		border: 1px solid var(--accent-border);
+		color: var(--accent-violet);
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		font-size: 0.9rem;
+		font-family: var(--font-sans);
 		font-weight: 500;
 	}
 
-	.panel-divider {
-		height: 1px;
-		background: var(--glass-border);
-		margin-bottom: 20px;
+	/* ─── Job History ─── */
+	.job-history {
+		display: grid;
+		gap: 1rem;
 	}
 
-	.hire-cta-btn {
+	.job-card {
+		background: var(--bg-elevated);
+		border: 1px solid var(--glass-border);
+		border-radius: 8px;
+		padding: 1.5rem;
+		transition: border-color 0.15s ease;
+	}
+
+	.job-card:hover {
+		border-color: var(--accent-border);
+	}
+
+	.job-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		margin-bottom: 0.75rem;
+		gap: 1rem;
+	}
+
+	.job-title {
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0;
+		font-family: var(--font-sans);
+	}
+
+	.job-outcome {
+		padding: 0.35rem 0.75rem;
+		border-radius: 4px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		font-family: var(--font-mono);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.outcome-completed {
+		background: var(--success-subtle, rgba(16, 185, 129, 0.1));
+		color: var(--success-color, #10b981);
+		border: 1px solid var(--success-subtle, rgba(16, 185, 129, 0.2));
+	}
+
+	.outcome-disputed {
+		background: rgba(239, 68, 68, 0.1);
+		color: #ef4444;
+		border: 1px solid rgba(239, 68, 68, 0.2);
+	}
+
+	.job-client,
+	.job-date {
+		font-size: 0.9rem;
+		color: var(--text-secondary);
+		margin: 0.25rem 0;
+		font-family: var(--font-sans);
+	}
+
+	.job-rating {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		width: 100%;
-		background: var(--accent-primary);
-		color: #ffffff;
-		font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
-		font-weight: 700;
-		font-size: 15px;
-		padding: 14px;
-		border: none;
-		border-radius: 12px;
-		cursor: pointer;
-		text-decoration: none;
-		transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
-		margin-bottom: 12px;
+		gap: 0.75rem;
+		margin-top: 0.75rem;
+		font-family: var(--font-mono);
 	}
 
-	.hire-cta-btn:hover {
-		opacity: 0.9;
-		transform: translateY(-1px);
-		box-shadow: 0 6px 20px var(--accent-glow);
+	.stars-rating {
+		font-size: 1.1rem;
+		color: var(--accent-violet);
 	}
 
-	.hire-cta-github {
-		background: #1a1a28;
-		border: 1px solid var(--border-strong);
+	.rating-number {
+		color: var(--text-secondary);
+		font-size: 0.85rem;
 	}
 
-	.panel-hint {
-		font-family: 'Inter', sans-serif;
-		font-size: 11px;
+	.no-history {
 		color: var(--text-muted);
+		font-style: italic;
+		margin: 2rem 0;
 		text-align: center;
-		margin: 0;
-		line-height: 1.5;
 	}
 
-	/* Responsive */
+	/* ═══ HIRE SECTION ═══ */
+	.hire-section {
+		background: var(--bg-elevated);
+		border-top: 1px solid var(--glass-border);
+		padding: 3rem 2rem;
+		margin-top: 3rem;
+	}
+
+	.hire-content {
+		max-width: 1200px;
+		margin: 0 auto;
+		text-align: center;
+	}
+
+	.hire-content h2 {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0 0 0.5rem;
+		font-family: var(--font-mono);
+	}
+
+	.hire-content p {
+		font-size: 1rem;
+		color: var(--text-secondary);
+		margin: 0 0 1.5rem;
+		font-family: var(--font-sans);
+	}
+
+	.btn-hire-large {
+		background: transparent;
+		border: 1px solid var(--glass-border);
+		color: var(--text-secondary);
+		font-family: var(--font-mono);
+		font-size: 0.9rem;
+		font-weight: 600;
+		padding: 0.75rem 1.5rem;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.btn-hire-large:hover {
+		border-color: var(--accent-border);
+		color: var(--accent-violet);
+		background: var(--glass-hover);
+	}
+
+	/* ─── Responsive ─── */
 	@media (max-width: 768px) {
-		.content-grid {
+		.agent-title {
+			font-size: 1.75rem;
+		}
+
+		.profile-hero {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+
+		.avatar-large {
+			width: 80px;
+			height: 80px;
+			font-size: 32px;
+		}
+
+		.stats-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 1rem;
+		}
+
+		.job-header {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.agent-title {
+			font-size: 1.5rem;
+		}
+
+		.section-title {
+			font-size: 1.25rem;
+		}
+
+		.stats-grid {
 			grid-template-columns: 1fr;
 		}
-		.hire-panel {
-			position: static;
-			order: -1;
+
+		.job-history {
+			gap: 0.75rem;
 		}
-		.hero-content {
-			flex-direction: column;
-		}
-		.hero-stats {
-			gap: 16px;
-		}
-		.stat-sep { display: none; }
-		.hero-stats {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 16px;
+
+		.job-card {
+			padding: 1rem;
 		}
 	}
 </style>
