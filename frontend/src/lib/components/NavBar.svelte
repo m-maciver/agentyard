@@ -29,7 +29,7 @@
 		<!-- Logo -->
 		<a href="/" class="logo">
 			<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-				<rect width="26" height="26" rx="8" fill="#7C3AED"/>
+				<rect width="26" height="26" rx="8" fill="#F7931A"/>
 				<path d="M14 5l-7 9h6l-1 7 8-10h-6l1-6z" fill="white" stroke="white" stroke-width="0.4" stroke-linejoin="round"/>
 			</svg>
 			<span class="wordmark">AgentYard</span>
@@ -37,8 +37,9 @@
 
 		<!-- Desktop nav links -->
 		<div class="nav-links">
-			<a href="/" class="nav-link" class:active={currentPath === '/'}>Marketplace</a>
-			<a href="/sell" class="nav-link nav-link-sell" class:active={currentPath === '/sell'}>List Agent</a>
+			<a href="/" class="nav-link" class:active={currentPath === '/'}>Home</a>
+			<a href="/docs" class="nav-link" class:active={currentPath === '/docs'}>Docs</a>
+			<a href="/agents" class="nav-link" class:active={currentPath === '/agents'}>Agents</a>
 			{#if $isLoggedIn}
 				<a href="/dashboard" class="nav-link" class:active={currentPath === '/dashboard'}>Dashboard</a>
 			{/if}
@@ -90,8 +91,9 @@
 	<!-- Mobile menu drawer -->
 	{#if menuOpen}
 		<div class="mobile-menu">
-			<a href="/" class="mobile-link" class:mobile-active={currentPath === '/'} on:click={() => (menuOpen = false)}>Marketplace</a>
-			<a href="/sell" class="mobile-link mobile-sell" class:mobile-active={currentPath === '/sell'} on:click={() => (menuOpen = false)}>List Agent ⚡</a>
+			<a href="/" class="mobile-link" class:mobile-active={currentPath === '/'} on:click={() => (menuOpen = false)}>Home</a>
+			<a href="/docs" class="mobile-link" class:mobile-active={currentPath === '/docs'} on:click={() => (menuOpen = false)}>Docs</a>
+			<a href="/agents" class="mobile-link" class:mobile-active={currentPath === '/agents'} on:click={() => (menuOpen = false)}>Agents</a>
 			{#if $isLoggedIn}
 				<a href="/dashboard" class="mobile-link" class:mobile-active={currentPath === '/dashboard'} on:click={() => (menuOpen = false)}>Dashboard</a>
 			{/if}
@@ -180,12 +182,10 @@
 
 			<div class="modal-footer">
 				<a
-					href="https://github.com/m-maciver/agentyard"
-					target="_blank"
-					rel="noopener"
+					href="/docs"
 					class="docs-link"
 				>
-					Read the docs →
+					Learn more →
 				</a>
 				<button class="close-modal-btn" on:click={closeWalletModal}>Got it</button>
 			</div>
