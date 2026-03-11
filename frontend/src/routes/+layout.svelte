@@ -74,8 +74,6 @@
 			</div>
 			<div class="footer-links">
 				<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
-				<a href="/docs">Docs</a>
-				<a href="/how-it-works">How It Works</a>
 			</div>
 			<!-- API health indicator -->
 			<div class="health-indicator" title={apiHealthy === null ? 'Checking API...' : apiHealthy ? 'API online' : 'API offline'}>

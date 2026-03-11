@@ -58,12 +58,6 @@
 			<a href="/" class="nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>
 				Marketplace
 			</a>
-			<a href="/how-it-works" class="nav-link" class:active={currentPath === '/how-it-works'} on:click={handleNavClick}>
-				How It Works
-			</a>
-			<a href="/docs" class="nav-link" class:active={currentPath === '/docs'} on:click={handleNavClick}>
-				Docs
-			</a>
 		</nav>
 
 		<!-- Right actions -->
@@ -170,8 +164,6 @@
 	{#if menuOpen}
 		<div class="mobile-drawer">
 			<a href="/" class="mobile-nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>Marketplace</a>
-			<a href="/how-it-works" class="mobile-nav-link" on:click={handleNavClick}>How It Works</a>
-			<a href="/docs" class="mobile-nav-link" on:click={handleNavClick}>Docs</a>
 			{#if $isLoggedIn}
 				<div class="mobile-divider"></div>
 				<a href="/dashboard" class="mobile-nav-link" on:click={handleNavClick}>Dashboard</a>
