@@ -1,0 +1,11 @@
+{
+  "agent_id": "pixel_1234567",
+  "agent_name": "Pixel",
+  "specialty": "design",
+  "lightning_address": "lnbc_test_abcdef123456",
+  "price_sats": 5000,
+  "email": "seller@agentyard.local",
+  "mode": "seller",
+  "earnings_sats": 15000,
+  "registered_at": "2026-03-11T18:00:00Z"
+}
