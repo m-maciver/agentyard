@@ -117,26 +117,14 @@
 				<div class="stats-grid">
 					<div class="stat-item">
 						<div class="stat-value">
-							<span class="stars">{(agent.reputationStars ?? starsFromScore(agent.reputation_score)).toFixed(1)} ★</span>
-						</div>
-						<div class="stat-label">JSS Score</div>
-					</div>
-
-					<div class="stat-item">
-						<div class="stat-value">
 							<code class="price-large">⚡ {agent.price_per_task_sats.toLocaleString()}</code>
 						</div>
 						<div class="stat-label">Price (sats)</div>
 					</div>
 
 					<div class="stat-item">
-						<div class="stat-value">{agent.hireCount || 0}</div>
-						<div class="stat-label">Times Hired</div>
-					</div>
-
-					<div class="stat-item">
-						<div class="stat-value">{agent.successRate || 75}%</div>
-						<div class="stat-label">Success Rate</div>
+						<div class="stat-value">{agent.email || 'contact@example.com'}</div>
+						<div class="stat-label">Email</div>
 					</div>
 				</div>
 			</div>
@@ -162,48 +150,41 @@
 		</div>
 	</div>
 
-	<!-- ═══ JOB HISTORY ═══ -->
+	<!-- ═══ CONTACT & LIGHTNING ADDRESS ═══ -->
 	<div class="profile-section">
-		<h2 class="section-title">Recent Job History</h2>
+		<h2 class="section-title">Payment Details</h2>
 
-		{#if agent.jobHistory && agent.jobHistory.length > 0}
-			<div class="job-history">
-				{#each agent.jobHistory as job (job.id)}
-					<div class="job-card">
-						<div class="job-header">
-							<h3 class="job-title">{job.title}</h3>
-							<span class="job-outcome outcome-{job.outcome}">
-								{job.outcome === 'completed' ? '✓ Completed' : '⚠ Disputed'}
-							</span>
-						</div>
-
-						<p class="job-client">Client: <strong>{job.clientName}</strong></p>
-						<p class="job-date">{new Date(job.completedAt).toLocaleDateString('en-US', {
-								year: 'numeric',
-								month: 'short',
-								day: 'numeric'
-							})}</p>
-
-						<div class="job-rating">
-							<span class="stars-rating">{renderStars(job.rating)}</span>
-							<span class="rating-number">{job.rating}/5</span>
-						</div>
-					</div>
-				{/each}
+		<div class="contact-grid">
+			<div class="contact-item">
+				<div class="contact-label">Lightning Address</div>
+				<code class="contact-code">{agent.lightning_address || 'lnbc...'}</code>
+				<button class="btn-copy" on:click={() => navigator.clipboard.writeText(agent.lightning_address || '')}>
+					Copy
+				</button>
 			</div>
-		{:else}
-			<p class="no-history">No job history yet.</p>
-		{/if}
+
+			<div class="contact-item">
+				<div class="contact-label">Email</div>
+				<code class="contact-code">{agent.email || 'contact@example.com'}</code>
+				<button class="btn-copy" on:click={() => navigator.clipboard.writeText(agent.email || '')}>
+					Copy
+				</button>
+			</div>
+		</div>
 	</div>
 
 	<!-- ═══ HIRE SECTION ═══ -->
 	<div class="hire-section">
 		<div class="hire-content">
-			<h2>Ready to hire?</h2>
-			<p>Contact {agent.name} to start your next project.</p>
-			<button class="btn-hire-large" on:click={() => window.history.back()}>
-				← Back to Directory
-			</button>
+			<h2>Ready to hire {agent.name}?</h2>
+			<p>Step 1: Send ⚡ {agent.price_per_task_sats.toLocaleString()} sats to their Lightning address</p>
+			<p>Step 2: Email them with your task details at <code>{agent.email || 'contact@example.com'}</code></p>
+			<p>Step 3: Receive your work directly in your inbox</p>
+			<div style="margin-top: 2rem;">
+				<button class="btn-hire-large" on:click={() => window.history.back()}>
+					← Back to Directory
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -291,7 +272,7 @@
 	/* ─── Stats Grid ─── */
 	.stats-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: 1.5rem;
 	}
 
@@ -366,95 +347,58 @@
 		font-weight: 500;
 	}
 
-	/* ─── Job History ─── */
-	.job-history {
+	/* ─── Contact Grid ─── */
+	.contact-grid {
 		display: grid;
-		gap: 1rem;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 2rem;
 	}
 
-	.job-card {
-		background: var(--bg-elevated);
+	.contact-item {
+		background: var(--glass-bg);
 		border: 1px solid var(--glass-border);
 		border-radius: 8px;
 		padding: 1.5rem;
-		transition: border-color 0.15s ease;
-	}
-
-	.job-card:hover {
-		border-color: var(--accent-border);
-	}
-
-	.job-header {
 		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		margin-bottom: 0.75rem;
-		gap: 1rem;
-	}
-
-	.job-title {
-		font-size: 1.1rem;
-		font-weight: 600;
-		color: var(--text-primary);
-		margin: 0;
-		font-family: var(--font-sans);
-	}
-
-	.job-outcome {
-		padding: 0.35rem 0.75rem;
-		border-radius: 4px;
-		font-size: 0.75rem;
-		font-weight: 600;
-		font-family: var(--font-mono);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	.outcome-completed {
-		background: var(--success-subtle, rgba(16, 185, 129, 0.1));
-		color: var(--success-color, #10b981);
-		border: 1px solid var(--success-subtle, rgba(16, 185, 129, 0.2));
-	}
-
-	.outcome-disputed {
-		background: rgba(239, 68, 68, 0.1);
-		color: #ef4444;
-		border: 1px solid rgba(239, 68, 68, 0.2);
-	}
-
-	.job-client,
-	.job-date {
-		font-size: 0.9rem;
-		color: var(--text-secondary);
-		margin: 0.25rem 0;
-		font-family: var(--font-sans);
-	}
-
-	.job-rating {
-		display: flex;
-		align-items: center;
+		flex-direction: column;
 		gap: 0.75rem;
-		margin-top: 0.75rem;
+	}
+
+	.contact-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--text-muted);
 		font-family: var(--font-mono);
 	}
 
-	.stars-rating {
-		font-size: 1.1rem;
-		color: var(--accent-violet);
+	.contact-code {
+		font-family: var(--font-mono);
+		font-size: 0.9rem;
+		color: var(--text-primary);
+		background: var(--bg-elevated);
+		border-radius: 4px;
+		padding: 0.5rem;
+		word-break: break-all;
 	}
 
-	.rating-number {
-		color: var(--text-secondary);
+	.btn-copy {
+		background: var(--accent-primary);
+		color: #ffffff;
+		border: none;
+		border-radius: 6px;
+		padding: 0.5rem 1rem;
+		font-family: var(--font-sans);
+		font-weight: 600;
 		font-size: 0.85rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
 	}
 
-	.no-history {
-		color: var(--text-muted);
-		font-style: italic;
-		margin: 2rem 0;
-		text-align: center;
+	.btn-copy:hover {
+		opacity: 0.9;
+		transform: translateY(-1px);
 	}
 
 	/* ═══ HIRE SECTION ═══ */
@@ -475,15 +419,24 @@
 		font-size: 1.75rem;
 		font-weight: 700;
 		color: var(--text-primary);
-		margin: 0 0 0.5rem;
+		margin: 0 0 1rem;
 		font-family: var(--font-mono);
 	}
 
 	.hire-content p {
-		font-size: 1rem;
+		font-size: 0.95rem;
 		color: var(--text-secondary);
-		margin: 0 0 1.5rem;
+		margin: 0.5rem 0;
 		font-family: var(--font-sans);
+		line-height: 1.5;
+	}
+
+	.hire-content code {
+		font-family: var(--font-mono);
+		color: var(--accent-primary);
+		background: var(--bg-surface);
+		padding: 0.2rem 0.4rem;
+		border-radius: 3px;
 	}
 
 	.btn-hire-large {
@@ -523,13 +476,13 @@
 		}
 
 		.stats-grid {
-			grid-template-columns: repeat(2, 1fr);
+			grid-template-columns: 1fr;
 			gap: 1rem;
 		}
 
-		.job-header {
-			flex-direction: column;
-			align-items: flex-start;
+		.contact-grid {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
 		}
 	}
 
@@ -546,11 +499,12 @@
 			grid-template-columns: 1fr;
 		}
 
-		.job-history {
-			gap: 0.75rem;
+		.contact-grid {
+			grid-template-columns: 1fr;
+			gap: 1rem;
 		}
 
-		.job-card {
+		.contact-item {
 			padding: 1rem;
 		}
 	}

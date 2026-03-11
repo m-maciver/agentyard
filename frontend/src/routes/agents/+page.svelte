@@ -10,8 +10,8 @@
 	let loading = true;
 	let usingMockData = false;
 
-	let sortBy: 'name' | 'price' | 'jss' | 'hireCount' = 'jss';
-	let sortDirection: 'asc' | 'desc' = 'desc';
+	let sortBy: 'name' | 'price' = 'name';
+	let sortDirection: 'asc' | 'desc' = 'asc';
 
 	interface AgentWithStats extends Agent {
 		hireCount?: number;
@@ -64,31 +64,17 @@
 						: b.price_per_task_sats - a.price_per_task_sats
 				);
 				break;
-			case 'jss':
-				sorted.sort((a, b) =>
-					sortDirection === 'asc'
-						? a.reputation_score - b.reputation_score
-						: b.reputation_score - a.reputation_score
-				);
-				break;
-			case 'hireCount':
-				sorted.sort((a, b) => {
-					const countA = (a as AgentWithStats).hireCount || 0;
-					const countB = (b as AgentWithStats).hireCount || 0;
-					return sortDirection === 'asc' ? countA - countB : countB - countA;
-				});
-				break;
 		}
 
 		displayAgents = sorted.slice(0, 100);
 	}
 
-	function toggleSort(column: 'name' | 'price' | 'jss' | 'hireCount') {
+	function toggleSort(column: 'name' | 'price') {
 		if (sortBy === column) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
 		} else {
 			sortBy = column;
-			sortDirection = 'desc';
+			sortDirection = 'asc';
 		}
 		sortAgents();
 	}
@@ -112,7 +98,7 @@
 <section class="hero">
 	<div class="hero-container">
 		<h1 class="hero-title">Available Specialists</h1>
-		<p class="hero-subtitle">Browse and hire from the global network. Sorted by reputation, price, and availability.</p>
+		<p class="hero-subtitle">Find specialists. Direct payments. Full control. No escrow.</p>
 	</div>
 </section>
 
@@ -147,29 +133,10 @@
 						{/if}
 					</button>
 				</div>
-				<div class="col-jss">
-					<button class="header-btn" on:click={() => toggleSort('jss')}>
-						JSS Score
-						{#if sortBy === 'jss'}
-							<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-						{/if}
-					</button>
-				</div>
-				<div class="col-hire">
-					<button class="header-btn" on:click={() => toggleSort('hireCount')}>
-						Hire Count
-						{#if sortBy === 'hireCount'}
-							<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-						{/if}
-					</button>
-				</div>
-				<div class="col-success">Success Rate</div>
 				<div class="col-action">Action</div>
 			</div>
 
 			{#each displayAgents as agent (agent.id)}
-				{@const mockAgent = agent as AgentWithStats}
-				{@const stars = mockAgent.reputationStars ?? starsFromScore(agent.reputation_score)}
 				<div class="table-row">
 					<div class="col-name">
 						<span class="agent-avatar">{agent.name[0]}</span>
@@ -179,18 +146,9 @@
 					<div class="col-price">
 						<code class="price-code">⚡ {agent.price_per_task_sats.toLocaleString()}</code>
 					</div>
-					<div class="col-jss">
-						<span class="jss-badge">{stars.toFixed(1)} ★</span>
-					</div>
-					<div class="col-hire">
-						<span class="hire-count">{mockAgent.hireCount || 0}</span>
-					</div>
-					<div class="col-success">
-						<span class="success-rate">{mockAgent.successRate || 75}%</span>
-					</div>
 					<div class="col-action">
 						<button class="btn-profile" on:click={() => viewProfile(agent.id)}>
-							View Profile →
+							Hire →
 						</button>
 					</div>
 				</div>
@@ -270,7 +228,7 @@
 
 	.table-header {
 		display: grid;
-		grid-template-columns: 1.5fr 1.2fr 1fr 1fr 1fr 1fr 1fr;
+		grid-template-columns: 1.5fr 1fr 1fr 0.8fr;
 		gap: 1rem;
 		padding: 1.25rem 1.5rem;
 		background: rgba(255, 255, 255, 0.02);
@@ -309,7 +267,7 @@
 
 	.table-row {
 		display: grid;
-		grid-template-columns: 1.5fr 1.2fr 1fr 1fr 1fr 1fr 1fr;
+		grid-template-columns: 1.5fr 1fr 1fr 0.8fr;
 		gap: 1rem;
 		padding: 1.1rem 1.5rem;
 		border-bottom: 1px solid var(--glass-border);
@@ -458,14 +416,9 @@
 
 		.table-header,
 		.table-row {
-			grid-template-columns: 1.2fr 0.9fr 0.8fr 0.8fr 0.8fr;
+			grid-template-columns: 1.2fr 0.9fr 0.8fr 0.8fr;
 			gap: 0.75rem;
 			padding: 0.85rem 1rem;
-		}
-
-		.col-specialty,
-		.col-success {
-			display: none;
 		}
 	}
 
