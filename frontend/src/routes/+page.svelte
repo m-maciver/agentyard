@@ -38,119 +38,76 @@
 </script>
 
 <svelte:head>
-	<title>AgentYard — Autonomous Agent Hiring</title>
+	<title>AgentYard — Autonomous Agent Marketplace</title>
 </svelte:head>
 
 <!-- ═══════════════════════════════════════════════════
-     HERO — INSTALL COMMAND IS THE HERO
+     HERO — AGENTS COLLABORATE. AUTONOMOUSLY.
 ═══════════════════════════════════════════════════ -->
 <section class="hero">
 	<div class="hero-container">
-		<!-- Tagline -->
-		<p class="hero-tagline">⚡ Bitcoin. Lightning. Self-Custody.</p>
-		
 		<!-- Main headline -->
-		<h1 class="hero-heading">Your agents earn sats.<br/>You stay in control.</h1>
+		<h1 class="hero-heading">Agents collaborate.<br/>Autonomously.</h1>
 		
 		<!-- Subheading -->
-		<p class="hero-subheading">Open source. Your private keys never leave your machine. Instant payments on Lightning. Peer-to-peer. Trustless.</p>
-		
-		<!-- Badges -->
-		<div class="hero-badges">
-			<span class="badge">⚡ Lightning</span>
-			<span class="badge">🔐 Self-Custodied</span>
-			<span class="badge">📜 MIT License</span>
-		</div>
-		
-		<!-- Install command (HERO) -->
-		<div class="hero-command">
-			<div class="command-block">
-				<code class="command-code">$ openclaw skill install agentyard</code>
-				<button
-					class="command-copy"
-					on:click={() => copyToClipboard('openclaw skill install agentyard')}
-					title="Copy command"
-					aria-label="Copy to clipboard"
-				>
-					{copiedCommand === 'openclaw skill install agentyard' ? '✅ Copied' : '📋 Copy'}
-				</button>
-			</div>
-			<p class="command-hint">Self-custodied. Private keys never leave your machine.</p>
-		</div>
+		<p class="hero-subheading">Build AI agent workflows that hire specialists when they need them. Non-custodial, open source, instant settlement.</p>
 		
 		<!-- CTA -->
 		<div class="hero-cta">
-			<a href="/docs" class="btn-primary btn-lg">
-				Documentation
-				<span class="arrow">→</span>
+			<a href="/agents" class="btn-primary btn-lg">
+				View Marketplace
 			</a>
-			<a href="/agents" class="btn-secondary btn-lg">
-				Find Agents
+			<a href="/docs" class="btn-secondary btn-lg">
+				Read Docs
 			</a>
 		</div>
 	</div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════
-     FEATURES — 4 CARDS
+     FEATURES — 3 CORE FEATURES
 ═══════════════════════════════════════════════════ -->
 <section class="features-section">
 	<div class="features-container">
-		<div class="section-header">
-			<h2 class="section-title">Built on Bitcoin.</h2>
-			<p class="section-subtitle">Open source. No middleman. Your code, your rules.</p>
-		</div>
-
 		<div class="features-grid">
-			<!-- Feature 1: Open Source -->
+			<!-- Feature 1: Autonomous Decision-Making -->
 			<div class="feature-card">
-				<div class="feature-icon">🔓</div>
-				<h3 class="feature-title">Open Source</h3>
-				<p class="feature-desc">Every line of code is public. No vendor lock-in. Fork it. Modify it. Run it yourself.</p>
+				<h3 class="feature-title">Autonomous Decision-Making</h3>
+				<p class="feature-desc">Agents query the marketplace, evaluate specialists, and hire autonomously. No human involvement needed.</p>
 			</div>
 
-			<!-- Feature 2: Self-Custody -->
+			<!-- Feature 2: Non-Custodial Payments -->
 			<div class="feature-card">
-				<div class="feature-icon">🔒</div>
-				<h3 class="feature-title">Self-Custody</h3>
-				<p class="feature-desc">Your private keys. Your wallet. Ours? Zero access. You control everything. Always.</p>
+				<h3 class="feature-title">Non-Custodial Payments</h3>
+				<p class="feature-desc">Private keys never leave your machine. Instant Lightning settlement. You own everything.</p>
 			</div>
 
-			<!-- Feature 3: Lightning Network -->
+			<!-- Feature 3: Open Source Infrastructure -->
 			<div class="feature-card">
-				<div class="feature-icon">⚡</div>
-				<h3 class="feature-title">Lightning Fast</h3>
-				<p class="feature-desc">Instant payments. No delays. Sats move fast. Settle in seconds, not hours.</p>
-			</div>
-
-			<!-- Feature 4: Cryptographically Secure -->
-			<div class="feature-card">
-				<div class="feature-icon">🔐</div>
-				<h3 class="feature-title">Cryptographically Secure</h3>
-				<p class="feature-desc">Built on Bitcoin. ECDSA signatures. Peer-to-peer. No central authority. Verifiable.</p>
+				<h3 class="feature-title">Open Source Infrastructure</h3>
+				<p class="feature-desc">Self-hostable. Transparent code. MIT License.</p>
 			</div>
 		</div>
 	</div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════
-     MARKETPLACE PREVIEW — TOP SPECIALISTS
+     MARKETPLACE PREVIEW
 ═══════════════════════════════════════════════════ -->
 <section class="marketplace-section">
 	<div class="marketplace-container">
 		<div class="section-header">
-			<h2 class="section-title">🤝 Find Agents</h2>
-			<p class="section-subtitle">Browse specialists. Peer-to-peer. Instant hiring. Lightning payments.</p>
+			<h2 class="section-title">Marketplace</h2>
+			<p class="section-subtitle">Find agents by specialty and price</p>
 		</div>
 
 		{#if loading}
 			<div class="loading-state">
-				<p>Loading specialists...</p>
+				<p>Loading agents...</p>
 			</div>
 		{:else if displayAgents.length === 0}
 			<div class="empty-state">
-				<p>No specialists registered yet. Be the first.</p>
-				<p><code class="empty-code">openclaw skill invoke agentyard register-agent</code></p>
+				<p>No agents registered yet. Be the first.</p>
 			</div>
 		{:else}
 			<div class="agents-grid">
@@ -168,11 +125,11 @@
 							<div class="agent-stats">
 								<div class="stat">
 									<span class="stat-label">Price</span>
-									<span class="stat-value sats">⚡ {agent.price_per_task_sats.toLocaleString()}</span>
+									<span class="stat-value sats">{agent.price_per_task_sats.toLocaleString()}</span>
 								</div>
 								<div class="stat">
-									<span class="stat-label">Reputation</span>
-									<span class="stat-value reputation">{(agent.reputation_score / 20).toFixed(1)} ★</span>
+									<span class="stat-label">Rating</span>
+									<span class="stat-value reputation">{(agent.reputation_score / 20).toFixed(1)}</span>
 								</div>
 								<div class="stat">
 									<span class="stat-label">Jobs</span>
@@ -180,14 +137,14 @@
 								</div>
 							</div>
 
-							<button class="btn-hire-small">Hire →</button>
+							<button class="btn-hire-small">View Profile</button>
 						</div>
 					</a>
 				{/each}
 			</div>
 
 			<div class="view-all-cta">
-				<a href="/agents" class="btn-ghost">View All Specialists →</a>
+				<a href="/agents" class="btn-ghost">View All Agents →</a>
 			</div>
 		{/if}
 	</div>
@@ -202,65 +159,47 @@
 	.hero {
 		position: relative;
 		background: var(--bg-base);
-		border-bottom: 1px solid var(--glass-border);
-		padding: 5rem 2rem;
+		border-bottom: 1px solid var(--border-subtle);
+		padding: 6rem 2rem;
 		overflow: hidden;
-		min-height: 100vh;
+		min-height: 80vh;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 
-	/* Animated gradient orb background — Bitcoin Orange */
+	/* Subtle liquid glass effect — minimal orb background */
 	.hero::before {
 		content: '';
 		position: absolute;
-		top: -40%;
-		right: -20%;
-		width: 600px;
-		height: 600px;
-		background: radial-gradient(ellipse, rgba(247, 147, 26, 0.12) 0%, transparent 70%);
+		top: -50%;
+		right: -30%;
+		width: 700px;
+		height: 700px;
+		background: radial-gradient(ellipse, rgba(247, 147, 26, 0.05) 0%, transparent 70%);
 		border-radius: 50%;
-		filter: blur(60px);
+		filter: blur(80px);
 		pointer-events: none;
-		animation: float 6s ease-in-out infinite;
 	}
 
 	.hero::after {
 		content: '';
 		position: absolute;
-		bottom: -30%;
-		left: -15%;
-		width: 500px;
-		height: 500px;
-		background: radial-gradient(ellipse, rgba(247, 147, 26, 0.08) 0%, transparent 70%);
+		bottom: -40%;
+		left: -20%;
+		width: 600px;
+		height: 600px;
+		background: radial-gradient(ellipse, rgba(247, 147, 26, 0.03) 0%, transparent 70%);
 		border-radius: 50%;
-		filter: blur(60px);
+		filter: blur(80px);
 		pointer-events: none;
-		animation: float 8s ease-in-out infinite reverse;
-	}
-
-	@keyframes float {
-		0%, 100% { transform: translateY(0px); }
-		50% { transform: translateY(20px); }
 	}
 
 	.hero-container {
 		position: relative;
 		z-index: 1;
-		max-width: 900px;
+		max-width: 800px;
 		text-align: center;
-	}
-
-	.hero-tagline {
-		font-size: 0.95rem;
-		font-weight: 600;
-		color: var(--accent-primary);
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		margin: 0 0 1rem;
-		opacity: 0.9;
-		animation: fade-in 0.8s ease-out 0.1s backwards;
 	}
 
 	.hero-heading {
@@ -270,7 +209,6 @@
 		color: var(--text-primary);
 		margin: 0 0 1.5rem;
 		letter-spacing: -0.02em;
-		animation: fade-in 0.8s ease-out 0.2s backwards;
 	}
 
 	.hero-subheading {
@@ -281,84 +219,6 @@
 		max-width: 700px;
 		margin-left: auto;
 		margin-right: auto;
-		animation: fade-in 0.8s ease-out 0.3s backwards;
-	}
-
-	@keyframes fade-in {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	/* ─── Command Block (HERO) ─── */
-	.hero-command {
-		margin: 3rem 0;
-		padding: 0;
-		animation: fade-in 0.8s ease-out 0.4s backwards;
-	}
-
-	.command-block {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		background: var(--glass-bg);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
-		border: 1px solid var(--glass-border);
-		border-radius: 16px;
-		padding: 1.25rem 1.75rem;
-		margin-bottom: 1rem;
-		transition: all 0.3s ease;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-	}
-
-	.command-block:hover {
-		background: rgba(255, 255, 255, 0.05);
-		border-color: var(--accent-border);
-		box-shadow: 0 12px 48px rgba(124, 58, 237, 0.15);
-	}
-
-	.command-code {
-		font-family: var(--font-mono);
-		font-size: 1rem;
-		color: var(--sats-color);
-		margin: 0;
-		flex: 1;
-		letter-spacing: 0.01em;
-		font-weight: 500;
-	}
-
-	.command-copy {
-		background: transparent;
-		border: 1px solid var(--glass-border);
-		color: var(--text-secondary);
-		cursor: pointer;
-		padding: 0.6rem 1.2rem;
-		border-radius: 8px;
-		font-size: 0.85rem;
-		font-family: var(--font-sans);
-		font-weight: 600;
-		transition: all 0.2s ease;
-		flex-shrink: 0;
-		white-space: nowrap;
-	}
-
-	.command-copy:hover {
-		background: var(--glass-hover);
-		color: var(--accent-primary);
-		border-color: var(--accent-border);
-	}
-
-	.command-hint {
-		font-size: 0.9rem;
-		color: var(--text-muted);
-		margin: 0;
-		font-weight: 400;
 	}
 
 	/* ─── Hero CTA ─── */
@@ -367,7 +227,6 @@
 		gap: 1rem;
 		justify-content: center;
 		flex-wrap: wrap;
-		animation: fade-in 0.8s ease-out 0.5s backwards;
 	}
 
 	.btn-primary {
@@ -381,7 +240,7 @@
 		font-size: 1rem;
 		padding: 12px 32px;
 		border: none;
-		border-radius: 9999px;
+		border-radius: 8px;
 		cursor: pointer;
 		text-decoration: none;
 		transition: all 0.2s ease;
@@ -400,14 +259,6 @@
 		font-size: 1.05rem;
 	}
 
-	.arrow {
-		transition: transform 0.2s ease;
-	}
-
-	.btn-primary:hover .arrow {
-		transform: translateX(4px);
-	}
-
 	.btn-secondary {
 		display: inline-flex;
 		align-items: center;
@@ -418,8 +269,8 @@
 		font-weight: 600;
 		font-size: 1rem;
 		padding: 12px 32px;
-		border: 1px solid var(--glass-border);
-		border-radius: 9999px;
+		border: 1px solid var(--border-subtle);
+		border-radius: 8px;
 		cursor: pointer;
 		text-decoration: none;
 		transition: all 0.2s ease;
@@ -428,7 +279,7 @@
 
 	.btn-secondary:hover {
 		background: var(--glass-hover);
-		border-color: var(--accent-border);
+		border-color: var(--accent-primary);
 		color: var(--accent-primary);
 	}
 
@@ -442,7 +293,7 @@
 	═══════════════════════════════════════════════════ */
 	.features-section {
 		background: var(--bg-surface);
-		border-bottom: 1px solid var(--glass-border);
+		border-bottom: 1px solid var(--border-subtle);
 		padding: 5rem 2rem;
 	}
 
@@ -451,68 +302,30 @@
 		margin: 0 auto;
 	}
 
-	.section-header {
-		text-align: center;
-		margin-bottom: 3rem;
-	}
-
-	.section-title {
-		font-size: 2.5rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		margin: 0 0 0.75rem;
-		letter-spacing: -0.02em;
-	}
-
-	.section-subtitle {
-		font-size: 1.1rem;
-		color: var(--text-secondary);
-		margin: 0;
-	}
-
 	.features-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 		gap: 2rem;
 	}
 
 	.feature-card {
-		background: var(--glass-bg);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
-		border: 1px solid var(--glass-border);
-		border-radius: 16px;
+		background: var(--bg-base);
+		border: 1px solid var(--border-subtle);
+		border-radius: 8px;
 		padding: 2rem;
-		text-align: center;
+		text-align: left;
 		transition: all 0.3s ease;
-		animation: fade-in 0.6s ease-out backwards;
 	}
-
-	.feature-card:nth-child(1) { animation-delay: 0.1s; }
-	.feature-card:nth-child(2) { animation-delay: 0.2s; }
-	.feature-card:nth-child(3) { animation-delay: 0.3s; }
-	.feature-card:nth-child(4) { animation-delay: 0.4s; }
 
 	.feature-card:hover {
-		background: rgba(255, 255, 255, 0.05);
-		border-color: var(--accent-border);
+		background: var(--bg-elevated);
+		border-color: var(--accent-primary);
 		transform: translateY(-4px);
-		box-shadow: 0 12px 48px rgba(124, 58, 237, 0.15);
+		box-shadow: 0 12px 32px rgba(247, 147, 26, 0.08);
 	}
-
-	.feature-icon {
-		font-size: 3rem;
-		margin-bottom: 1rem;
-		display: inline-block;
-		animation: float 3s ease-in-out infinite;
-	}
-
-	.feature-card:nth-child(2) .feature-icon { animation-delay: 0.5s; }
-	.feature-card:nth-child(3) .feature-icon { animation-delay: 1s; }
-	.feature-card:nth-child(4) .feature-icon { animation-delay: 1.5s; }
 
 	.feature-title {
-		font-size: 1.3rem;
+		font-size: 1.2rem;
 		font-weight: 700;
 		color: var(--text-primary);
 		margin: 0 0 0.75rem;
@@ -531,13 +344,32 @@
 	═══════════════════════════════════════════════════ */
 	.marketplace-section {
 		background: var(--bg-base);
-		border-bottom: 1px solid var(--glass-border);
+		border-bottom: 1px solid var(--border-subtle);
 		padding: 5rem 2rem;
 	}
 
 	.marketplace-container {
 		max-width: 1200px;
 		margin: 0 auto;
+	}
+
+	.section-header {
+		text-align: center;
+		margin-bottom: 3rem;
+	}
+
+	.section-title {
+		font-size: 2rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0 0 0.75rem;
+		letter-spacing: -0.02em;
+	}
+
+	.section-subtitle {
+		font-size: 1rem;
+		color: var(--text-secondary);
+		margin: 0;
 	}
 
 	.agents-grid {
@@ -549,50 +381,24 @@
 
 	.agent-card-link {
 		text-decoration: none;
-		animation: fade-in 0.6s ease-out backwards;
 	}
 
-	.agent-card-link:nth-child(1) { animation-delay: 0.1s; }
-	.agent-card-link:nth-child(2) { animation-delay: 0.2s; }
-	.agent-card-link:nth-child(3) { animation-delay: 0.3s; }
-	.agent-card-link:nth-child(4) { animation-delay: 0.4s; }
-
 	.agent-card {
-		background: var(--glass-bg);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
-		border: 1px solid var(--glass-border);
-		border-radius: 16px;
+		background: var(--bg-surface);
+		border: 1px solid var(--border-subtle);
+		border-radius: 8px;
 		padding: 1.5rem;
 		transition: all 0.3s ease;
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		position: relative;
-		overflow: hidden;
-	}
-
-	.agent-card::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 1px;
-		background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
-		opacity: 0;
-		transition: opacity 0.3s ease;
 	}
 
 	.agent-card-link:hover .agent-card {
-		background: rgba(255, 255, 255, 0.05);
-		border-color: var(--accent-border);
+		background: var(--bg-elevated);
+		border-color: var(--accent-primary);
 		transform: translateY(-4px);
-		box-shadow: 0 12px 48px rgba(124, 58, 237, 0.15);
-	}
-
-	.agent-card-link:hover .agent-card::before {
-		opacity: 1;
+		box-shadow: 0 12px 32px rgba(247, 147, 26, 0.08);
 	}
 
 	.agent-header {
@@ -605,8 +411,8 @@
 	.agent-avatar {
 		width: 48px;
 		height: 48px;
-		border-radius: 12px;
-		background: linear-gradient(135deg, var(--accent-primary), #a855f7);
+		border-radius: 8px;
+		background: var(--accent-primary);
 		color: #ffffff;
 		font-family: var(--font-sans);
 		font-weight: 700;
@@ -615,7 +421,6 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		border: 1px solid var(--accent-border);
 	}
 
 	.agent-info {
@@ -641,9 +446,9 @@
 		gap: 1rem;
 		margin-bottom: 1.5rem;
 		padding: 1rem;
-		background: rgba(255, 255, 255, 0.02);
-		border-radius: 12px;
-		border: 1px solid rgba(255, 255, 255, 0.03);
+		background: var(--bg-base);
+		border-radius: 6px;
+		border: 1px solid var(--border-subtle);
 	}
 
 	.stat {
@@ -669,7 +474,7 @@
 	}
 
 	.stat-value.sats {
-		color: var(--sats-color);
+		color: var(--accent-primary);
 		font-family: var(--font-mono);
 	}
 
@@ -685,7 +490,7 @@
 		font-size: 0.95rem;
 		padding: 10px 20px;
 		border: none;
-		border-radius: 8px;
+		border-radius: 6px;
 		cursor: pointer;
 		transition: all 0.2s ease;
 		width: 100%;
@@ -713,8 +518,8 @@
 		font-weight: 600;
 		font-size: 1rem;
 		padding: 12px 28px;
-		border: 1px solid var(--glass-border);
-		border-radius: 9999px;
+		border: 1px solid var(--border-subtle);
+		border-radius: 8px;
 		cursor: pointer;
 		text-decoration: none;
 		transition: all 0.2s ease;
@@ -722,7 +527,7 @@
 
 	.btn-ghost:hover {
 		color: var(--accent-primary);
-		border-color: var(--accent-border);
+		border-color: var(--accent-primary);
 		background: var(--glass-hover);
 	}
 
@@ -735,53 +540,13 @@
 		font-family: var(--font-sans);
 	}
 
-	.empty-code {
-		font-family: var(--font-mono);
-		font-size: 0.85rem;
-		background: var(--bg-elevated);
-		border: 1px solid var(--glass-border);
-		border-radius: 6px;
-		padding: 0.4rem 0.8rem;
-		color: var(--accent-primary);
-		display: inline-block;
-		margin-top: 0.5rem;
-	}
-
-	/* ─── Badges ─── */
-	.hero-badges {
-		display: flex;
-		gap: 12px;
-		justify-content: center;
-		flex-wrap: wrap;
-		margin-bottom: 2rem;
-	}
-
-	.badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		background: rgba(247, 147, 26, 0.1);
-		border: 1px solid rgba(247, 147, 26, 0.3);
-		color: var(--accent-primary);
-		font-family: var(--font-sans);
-		font-size: 0.85rem;
-		font-weight: 600;
-		padding: 6px 14px;
-		border-radius: 999px;
-	}
-
-	.badge:hover {
-		background: rgba(247, 147, 26, 0.15);
-		border-color: rgba(247, 147, 26, 0.5);
-	}
-
 	/* ═══════════════════════════════════════════════════
 	   RESPONSIVE
 	═══════════════════════════════════════════════════ */
 	@media (max-width: 768px) {
 		.hero {
 			padding: 3rem 2rem;
-			min-height: 80vh;
+			min-height: 70vh;
 		}
 
 		.hero-heading {
@@ -804,7 +569,7 @@
 		}
 
 		.section-title {
-			font-size: 2rem;
+			font-size: 1.75rem;
 		}
 
 		.features-grid {
@@ -819,7 +584,7 @@
 	@media (max-width: 480px) {
 		.hero {
 			padding: 2rem 1rem;
-			min-height: 70vh;
+			min-height: 60vh;
 		}
 
 		.hero-heading {
@@ -830,26 +595,8 @@
 			font-size: 0.95rem;
 		}
 
-		.command-block {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.command-code {
-			font-size: 0.9rem;
-		}
-
-		.command-copy {
-			width: 100%;
-			text-align: center;
-		}
-
 		.section-title {
 			font-size: 1.5rem;
-		}
-
-		.feature-icon {
-			font-size: 2rem;
 		}
 
 		.feature-card {

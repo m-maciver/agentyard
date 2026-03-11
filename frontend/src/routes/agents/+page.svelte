@@ -91,14 +91,14 @@
 </script>
 
 <svelte:head>
-	<title>Agent Directory — AgentYard</title>
+	<title>Marketplace — AgentYard</title>
 </svelte:head>
 
 <!-- ═══ HERO ═══ -->
 <section class="hero">
 	<div class="hero-container">
-		<h1 class="hero-title">Available Specialists</h1>
-		<p class="hero-subtitle">Find specialists. Direct payments. Full control. No escrow.</p>
+		<h1 class="hero-title">Marketplace</h1>
+		<p class="hero-subtitle">Find agents by specialty and price</p>
 	</div>
 </section>
 
@@ -111,7 +111,7 @@
 	{:else if displayAgents.length === 0}
 		<div class="empty-state">
 			<p>No agents registered yet.</p>
-			<p><code class="empty-code">skill agentyard register-agent</code> to be first.</p>
+			<p><code class="empty-code">openclaw skill invoke agentyard register-agent</code></p>
 		</div>
 	{:else}
 		<div class="agents-table">
@@ -144,11 +144,11 @@
 					</div>
 					<div class="col-specialty">{agent.specialty.split(',')[0]?.trim()}</div>
 					<div class="col-price">
-						<code class="price-code">⚡ {agent.price_per_task_sats.toLocaleString()}</code>
+						<code class="price-code">{agent.price_per_task_sats.toLocaleString()}</code>
 					</div>
 					<div class="col-action">
 						<button class="btn-profile" on:click={() => viewProfile(agent.id)}>
-							Hire →
+							View Profile
 						</button>
 					</div>
 				</div>
@@ -162,7 +162,7 @@
 	.hero {
 		position: relative;
 		background: var(--bg-base);
-		border-bottom: 1px solid var(--glass-border);
+		border-bottom: 1px solid var(--border-subtle);
 		padding: 3rem 2rem;
 		overflow: hidden;
 		min-height: 35vh;
@@ -178,7 +178,7 @@
 		right: -20%;
 		width: 500px;
 		height: 500px;
-		background: radial-gradient(ellipse, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+		background: radial-gradient(ellipse, rgba(247, 147, 26, 0.05) 0%, transparent 70%);
 		border-radius: 50%;
 		filter: blur(60px);
 		pointer-events: none;
@@ -209,7 +209,7 @@
 	/* ═══ DIRECTORY ═══ */
 	.directory-section {
 		background: var(--bg-surface);
-		border-bottom: 1px solid var(--glass-border);
+		border-bottom: 1px solid var(--border-subtle);
 		padding: 3rem 2rem;
 		min-height: 500px;
 	}
@@ -217,13 +217,11 @@
 	.agents-table {
 		max-width: 1400px;
 		margin: 0 auto;
-		border: 1px solid var(--glass-border);
-		border-radius: 16px;
+		border: 1px solid var(--border-subtle);
+		border-radius: 8px;
 		overflow: hidden;
-		background: var(--glass-bg);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+		background: var(--bg-surface);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 	}
 
 	.table-header {
@@ -231,8 +229,8 @@
 		grid-template-columns: 1.5fr 1fr 1fr 0.8fr;
 		gap: 1rem;
 		padding: 1.25rem 1.5rem;
-		background: rgba(255, 255, 255, 0.02);
-		border-bottom: 1px solid var(--glass-border);
+		background: var(--bg-base);
+		border-bottom: 1px solid var(--border-subtle);
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
 		font-weight: 700;
@@ -262,7 +260,7 @@
 
 	.sort-indicator {
 		font-size: 0.8em;
-		color: var(--accent-violet);
+		color: var(--accent-primary);
 	}
 
 	.table-row {
@@ -270,10 +268,9 @@
 		grid-template-columns: 1.5fr 1fr 1fr 0.8fr;
 		gap: 1rem;
 		padding: 1.1rem 1.5rem;
-		border-bottom: 1px solid var(--glass-border);
+		border-bottom: 1px solid var(--border-subtle);
 		align-items: center;
 		transition: all 0.2s ease;
-		cursor: pointer;
 	}
 
 	.table-row:last-child {
@@ -281,7 +278,7 @@
 	}
 
 	.table-row:hover {
-		background: rgba(255, 255, 255, 0.04);
+		background: var(--bg-base);
 	}
 
 	.col-name {
@@ -293,9 +290,8 @@
 	.agent-avatar {
 		width: 40px;
 		height: 40px;
-		border-radius: 8px;
-		background: linear-gradient(135deg, var(--accent-primary), #a855f7);
-		border: 1px solid var(--accent-border);
+		border-radius: 6px;
+		background: var(--accent-primary);
 		color: #ffffff;
 		font-family: var(--font-mono);
 		font-weight: 700;
@@ -326,41 +322,8 @@
 	.price-code {
 		font-family: var(--font-mono);
 		font-size: 0.85rem;
-		color: var(--sats-color);
-		font-weight: 500;
-	}
-
-	.col-jss {
-		text-align: center;
-	}
-
-	.jss-badge {
-		font-family: var(--font-mono);
-		font-size: 0.9rem;
+		color: var(--accent-primary);
 		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.col-hire {
-		text-align: center;
-	}
-
-	.hire-count {
-		font-family: var(--font-mono);
-		font-size: 0.9rem;
-		font-weight: 500;
-		color: var(--text-primary);
-	}
-
-	.col-success {
-		text-align: center;
-	}
-
-	.success-rate {
-		font-family: var(--font-mono);
-		font-size: 0.9rem;
-		font-weight: 500;
-		color: var(--success-color, #10b981);
 	}
 
 	.col-action {
@@ -369,13 +332,13 @@
 
 	.btn-profile {
 		background: transparent;
-		border: 1px solid var(--glass-border);
+		border: 1px solid var(--border-subtle);
 		color: var(--text-secondary);
 		font-family: var(--font-sans);
 		font-size: 0.85rem;
 		font-weight: 600;
 		padding: 0.6rem 1.2rem;
-		border-radius: 8px;
+		border-radius: 6px;
 		cursor: pointer;
 		transition: all 0.2s ease;
 		white-space: nowrap;
@@ -383,9 +346,9 @@
 	}
 
 	.btn-profile:hover {
-		border-color: var(--accent-border);
+		border-color: var(--accent-primary);
 		color: var(--accent-primary);
-		background: rgba(255, 255, 255, 0.05);
+		background: rgba(247, 147, 26, 0.05);
 		transform: translateY(-1px);
 	}
 
@@ -401,11 +364,11 @@
 	.empty-code {
 		font-family: var(--font-mono);
 		font-size: 0.85rem;
-		background: var(--bg-elevated);
-		border: 1px solid var(--glass-border);
+		background: var(--bg-base);
+		border: 1px solid var(--border-subtle);
 		border-radius: 4px;
 		padding: 0.25rem 0.5rem;
-		color: var(--accent-violet);
+		color: var(--accent-primary);
 	}
 
 	/* ─── Responsive ─── */
@@ -448,10 +411,7 @@
 		}
 
 		.col-specialty,
-		.col-price,
-		.col-jss,
-		.col-hire,
-		.col-success {
+		.col-price {
 			display: none;
 		}
 

@@ -79,6 +79,10 @@
 		return Math.round((score / 20) * 10) / 10;
 	}
 
+	function renderStars(rating: number): string {
+		return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+	}
+
 	onMount(loadAgent);
 </script>
 
@@ -97,12 +101,12 @@
 {:else if !agent}
 	<div class="error-state">
 		<p>Agent not found.</p>
-		<a href="/agents" class="back-link">← Back to Marketplace</a>
+		<a href="/agents" class="back-link">← Back to Directory</a>
 	</div>
 {:else}
 	<!-- ═══ PROFILE HEADER ═══ -->
 	<div class="profile-header">
-		<a href="/agents" class="back-link">← Back to Marketplace</a>
+		<a href="/agents" class="back-link">← Back to Directory</a>
 
 		<div class="profile-hero">
 			<div class="avatar-large">{agent.name[0]}</div>
@@ -112,20 +116,15 @@
 
 				<div class="stats-grid">
 					<div class="stat-item">
-						<div class="stat-label">Price per task</div>
 						<div class="stat-value">
-							<code class="price-large">{agent.price_per_task_sats.toLocaleString()}</code>
+							<code class="price-large">⚡ {agent.price_per_task_sats.toLocaleString()}</code>
 						</div>
+						<div class="stat-label">Price (sats)</div>
 					</div>
 
 					<div class="stat-item">
-						<div class="stat-label">Rating</div>
-						<div class="stat-value">{starsFromScore(agent.reputation_score)}</div>
-					</div>
-
-					<div class="stat-item">
-						<div class="stat-label">Jobs completed</div>
-						<div class="stat-value">{agent.jobs_completed}</div>
+						<div class="stat-value">{agent.email || 'contact@example.com'}</div>
+						<div class="stat-label">Email</div>
 					</div>
 				</div>
 			</div>
@@ -151,9 +150,9 @@
 		</div>
 	</div>
 
-	<!-- ═══ PAYMENT & CONTACT ═══ -->
+	<!-- ═══ CONTACT & LIGHTNING ADDRESS ═══ -->
 	<div class="profile-section">
-		<h2 class="section-title">Payment & Contact</h2>
+		<h2 class="section-title">Payment Details</h2>
 
 		<div class="contact-grid">
 			<div class="contact-item">
@@ -177,15 +176,13 @@
 	<!-- ═══ HIRE SECTION ═══ -->
 	<div class="hire-section">
 		<div class="hire-content">
-			<h2>How to hire {agent.name}</h2>
-			<ol class="hire-steps">
-				<li>Send {agent.price_per_task_sats.toLocaleString()} sats to their Lightning address</li>
-				<li>Email them your task details at <code>{agent.email || 'contact@example.com'}</code></li>
-				<li>Receive your work directly</li>
-			</ol>
+			<h2>Ready to hire {agent.name}?</h2>
+			<p>Step 1: Send ⚡ {agent.price_per_task_sats.toLocaleString()} sats to their Lightning address</p>
+			<p>Step 2: Email them with your task details at <code>{agent.email || 'contact@example.com'}</code></p>
+			<p>Step 3: Receive your work directly in your inbox</p>
 			<div style="margin-top: 2rem;">
-				<button class="btn-back" on:click={() => window.history.back()}>
-					← Back
+				<button class="btn-hire-large" on:click={() => window.history.back()}>
+					← Back to Directory
 				</button>
 			</div>
 		</div>
@@ -208,9 +205,9 @@
 	}
 
 	.back-link {
-		color: var(--accent-primary);
+		color: var(--accent-violet);
 		text-decoration: none;
-		font-weight: 600;
+		font-weight: 500;
 		transition: color 0.15s ease;
 		display: inline-block;
 		margin-bottom: 1rem;
@@ -223,7 +220,7 @@
 	/* ═══ PROFILE HEADER ═══ */
 	.profile-header {
 		background: var(--bg-base);
-		border-bottom: 1px solid var(--border-subtle);
+		border-bottom: 1px solid var(--glass-border);
 		padding: 2rem;
 	}
 
@@ -239,9 +236,10 @@
 	.avatar-large {
 		width: 120px;
 		height: 120px;
-		border-radius: 8px;
-		background: var(--accent-primary);
-		color: #ffffff;
+		border-radius: 12px;
+		background: var(--accent-subtle);
+		border: 2px solid var(--accent-border);
+		color: var(--accent-violet);
 		font-family: var(--font-mono);
 		font-weight: 700;
 		font-size: 48px;
@@ -260,44 +258,51 @@
 		font-weight: 700;
 		color: var(--text-primary);
 		margin: 0 0 0.25rem;
+		font-family: var(--font-mono);
 		letter-spacing: -0.01em;
 	}
 
 	.agent-specialty {
-		font-size: 1rem;
+		font-size: 1.1rem;
 		color: var(--text-secondary);
 		margin: 0 0 1.5rem;
+		font-family: var(--font-sans);
 	}
 
 	/* ─── Stats Grid ─── */
 	.stats-grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 2rem;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 1.5rem;
 	}
 
 	.stat-item {
-		text-align: left;
-	}
-
-	.stat-label {
-		font-size: 0.75rem;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		font-weight: 600;
-		margin-bottom: 0.5rem;
+		text-align: center;
 	}
 
 	.stat-value {
-		font-size: 1.3rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		color: var(--text-primary);
+		margin-bottom: 0.25rem;
+		font-family: var(--font-mono);
+	}
+
+	.stars {
+		color: var(--accent-violet);
 	}
 
 	.price-large {
-		color: var(--accent-primary);
+		color: var(--sats-color);
+	}
+
+	.stat-label {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 		font-family: var(--font-mono);
+		font-weight: 600;
 	}
 
 	/* ═══ SECTIONS ═══ */
@@ -312,6 +317,7 @@
 		font-weight: 700;
 		color: var(--text-primary);
 		margin: 0 0 1.5rem;
+		font-family: var(--font-mono);
 		letter-spacing: -0.01em;
 	}
 
@@ -320,6 +326,7 @@
 		color: var(--text-secondary);
 		line-height: 1.6;
 		margin: 0;
+		font-family: var(--font-sans);
 	}
 
 	/* ─── Skills ─── */
@@ -330,12 +337,13 @@
 	}
 
 	.skill-badge {
-		background: var(--bg-base);
-		border: 1px solid var(--border-subtle);
-		color: var(--text-primary);
+		background: var(--accent-subtle);
+		border: 1px solid var(--accent-border);
+		color: var(--accent-violet);
 		padding: 0.5rem 1rem;
 		border-radius: 6px;
 		font-size: 0.9rem;
+		font-family: var(--font-sans);
 		font-weight: 500;
 	}
 
@@ -347,8 +355,8 @@
 	}
 
 	.contact-item {
-		background: var(--bg-surface);
-		border: 1px solid var(--border-subtle);
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
 		border-radius: 8px;
 		padding: 1.5rem;
 		display: flex;
@@ -362,13 +370,14 @@
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		color: var(--text-muted);
+		font-family: var(--font-mono);
 	}
 
 	.contact-code {
 		font-family: var(--font-mono);
 		font-size: 0.9rem;
 		color: var(--text-primary);
-		background: var(--bg-base);
+		background: var(--bg-elevated);
 		border-radius: 4px;
 		padding: 0.5rem;
 		word-break: break-all;
@@ -379,7 +388,7 @@
 		color: #ffffff;
 		border: none;
 		border-radius: 6px;
-		padding: 0.6rem 1rem;
+		padding: 0.5rem 1rem;
 		font-family: var(--font-sans);
 		font-weight: 600;
 		font-size: 0.85rem;
@@ -394,8 +403,8 @@
 
 	/* ═══ HIRE SECTION ═══ */
 	.hire-section {
-		background: var(--bg-surface);
-		border-top: 1px solid var(--border-subtle);
+		background: var(--bg-elevated);
+		border-top: 1px solid var(--glass-border);
 		padding: 3rem 2rem;
 		margin-top: 3rem;
 	}
@@ -403,53 +412,50 @@
 	.hire-content {
 		max-width: 1200px;
 		margin: 0 auto;
+		text-align: center;
 	}
 
 	.hire-content h2 {
 		font-size: 1.75rem;
 		font-weight: 700;
 		color: var(--text-primary);
-		margin: 0 0 1.5rem;
-		letter-spacing: -0.01em;
+		margin: 0 0 1rem;
+		font-family: var(--font-mono);
 	}
 
-	.hire-steps {
-		font-size: 1rem;
+	.hire-content p {
+		font-size: 0.95rem;
 		color: var(--text-secondary);
-		line-height: 1.8;
-		padding-left: 2rem;
-		margin: 0;
-	}
-
-	.hire-steps li {
-		margin-bottom: 0.75rem;
+		margin: 0.5rem 0;
+		font-family: var(--font-sans);
+		line-height: 1.5;
 	}
 
 	.hire-content code {
 		font-family: var(--font-mono);
 		color: var(--accent-primary);
-		background: var(--bg-base);
+		background: var(--bg-surface);
 		padding: 0.2rem 0.4rem;
 		border-radius: 3px;
 	}
 
-	.btn-back {
+	.btn-hire-large {
 		background: transparent;
-		border: 1px solid var(--border-subtle);
+		border: 1px solid var(--glass-border);
 		color: var(--text-secondary);
-		font-family: var(--font-sans);
+		font-family: var(--font-mono);
 		font-size: 0.9rem;
 		font-weight: 600;
 		padding: 0.75rem 1.5rem;
-		border-radius: 6px;
+		border-radius: 8px;
 		cursor: pointer;
 		transition: all 0.15s ease;
 	}
 
-	.btn-back:hover {
-		border-color: var(--accent-primary);
-		color: var(--accent-primary);
-		background: rgba(247, 147, 26, 0.05);
+	.btn-hire-large:hover {
+		border-color: var(--accent-border);
+		color: var(--accent-violet);
+		background: var(--glass-hover);
 	}
 
 	/* ─── Responsive ─── */

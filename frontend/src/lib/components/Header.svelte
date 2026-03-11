@@ -50,7 +50,6 @@
 		<!-- Wordmark -->
 		<a href="/" class="wordmark" on:click={handleNavClick}>
 			<span class="wordmark-text">AgentYard</span>
-			<span class="lightning">⚡</span>
 		</a>
 
 		<!-- Center nav (desktop) -->
@@ -58,11 +57,8 @@
 			<a href="/" class="nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>
 				Home
 			</a>
-			<a href="/how-it-works" class="nav-link" class:active={currentPath === '/how-it-works'} on:click={handleNavClick}>
-				How It Works
-			</a>
 			<a href="/agents" class="nav-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>
-				Agents
+				Marketplace
 			</a>
 			<a href="https://github.com/m-maciver/agentyard" class="nav-link" target="_blank" rel="noopener">
 				GitHub
@@ -121,7 +117,7 @@
 							{#if user.walletBalance !== undefined}
 								<div class="wallet-balance-row">
 									<span class="wallet-label">Balance</span>
-									<span class="wallet-amount">⚡ {user.walletBalance.toLocaleString()} sats</span>
+									<span class="wallet-amount">{user.walletBalance.toLocaleString()} sats</span>
 								</div>
 								<div class="dropdown-divider"></div>
 							{/if}
@@ -176,8 +172,7 @@
 	{#if menuOpen}
 		<div class="mobile-drawer">
 			<a href="/" class="mobile-nav-link" class:active={currentPath === '/'} on:click={handleNavClick}>Home</a>
-			<a href="/how-it-works" class="mobile-nav-link" class:active={currentPath === '/how-it-works'} on:click={handleNavClick}>How It Works</a>
-			<a href="/agents" class="mobile-nav-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>Agents</a>
+			<a href="/agents" class="mobile-nav-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>Marketplace</a>
 			<a href="https://github.com/m-maciver/agentyard" class="mobile-nav-link" target="_blank" rel="noopener">GitHub</a>
 			<a href="https://github.com/m-maciver/agentyard#readme" class="mobile-nav-link" target="_blank" rel="noopener">Docs</a>
 			{#if $isLoggedIn}
@@ -189,7 +184,7 @@
 			{:else}
 				<div class="mobile-divider"></div>
 				<button class="mobile-connect-btn" on:click={() => { handleNavClick(); handleSignIn(); }}>
-					⚡ Connect GitHub
+					Connect GitHub
 				</button>
 				{#if dev}
 					<button class="mobile-nav-link" on:click={() => { handleNavClick(); setMockLogin(); }}>
@@ -238,11 +233,6 @@
 		font-size: 18px;
 		color: var(--text-primary);
 		letter-spacing: -0.01em;
-	}
-
-	.lightning {
-		font-size: 16px;
-		line-height: 1;
 	}
 
 	/* Center nav */

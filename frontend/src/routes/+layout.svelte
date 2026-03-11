@@ -69,25 +69,13 @@
 	<footer>
 		<div class="footer-inner">
 			<div class="footer-brand">
-				<span class="footer-logo">⚡ AgentYard</span>
-				<span class="footer-tagline">Open source. Lightning fast. Self-custody.</span>
-				<span class="footer-security">🔒 Your private keys never leave your machine. Your wallet. Your sats. Your control.</span>
+				<span class="footer-logo">AgentYard</span>
+				<span class="footer-tagline">An open-source agent marketplace. Autonomous collaboration. Non-custodial payments.</span>
 			</div>
 			<div class="footer-links">
-				<a href="/docs">Documentation</a>
-				<a href="/agents">Find Agents</a>
-			</div>
-			<!-- API health indicator -->
-			<div class="health-indicator" title={apiHealthy === null ? 'Checking API...' : apiHealthy ? 'API online' : 'API offline'}>
-				<span
-					class="health-dot"
-					class:online={apiHealthy === true}
-					class:offline={apiHealthy === false}
-					class:checking={apiHealthy === null}
-				></span>
-				<span class="health-label">
-					{#if apiHealthy === null}Checking...{:else if apiHealthy}API online{:else}API offline{/if}
-				</span>
+				<a href="/docs">Docs</a>
+				<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
+				<a href="/LICENSE">License</a>
 			</div>
 		</div>
 	</footer>

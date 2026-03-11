@@ -4,32 +4,32 @@
    DESIGN TOKENS — Dark theme (default)
 ═══════════════════════════════════════════════════ */
 :root {
-	/* ── Backgrounds ── */
-	--bg-base:     #0a0a0a;
-	--bg-surface:  #111111;
-	--bg-elevated: #1a1a1a;
-	--glass-bg:    rgba(255, 255, 255, 0.03);
-	--glass-border: rgba(255, 255, 255, 0.07);
-	--glass-hover: rgba(255, 255, 255, 0.06);
+	/* ── Backgrounds — Professional Light Theme ── */
+	--bg-base:     #f8f9fa;
+	--bg-surface:  #ffffff;
+	--bg-elevated: #f3f4f6;
+	--glass-bg:    rgba(255, 255, 255, 0.8);
+	--glass-border: rgba(229, 231, 235, 1);
+	--glass-hover: rgba(243, 244, 246, 1);
 
 	/* ── Text ── */
-	--text-primary:   #f5f5f5;
-	--text-secondary: #b0b0b0;
-	--text-muted:     #808080;
+	--text-primary:   #1a1a1a;
+	--text-secondary: #6b7280;
+	--text-muted:     #9ca3af;
 
-	/* ── Accent — Bitcoin Orange ── */
+	/* ── Accent — Orange (sparingly) ── */
 	--accent-primary:  #F7931A;
-	--accent-violet:   #FFA500;
-	--accent-glow:     rgba(247, 147, 26, 0.18);
-	--accent-subtle:   rgba(247, 147, 26, 0.09);
-	--accent-border:   rgba(247, 147, 26, 0.25);
+	--accent-violet:   #F7931A;
+	--accent-glow:     rgba(247, 147, 26, 0.1);
+	--accent-subtle:   rgba(247, 147, 26, 0.05);
+	--accent-border:   rgba(247, 147, 26, 0.2);
 
-	/* ── Lightning / Sats (kept amber — semantic for Bitcoin) ── */
-	--sats-color: #f59e0b;
+	/* ── Lightning / Sats ── */
+	--sats-color: #F7931A;
 
 	/* ── Borders ── */
-	--border-subtle: rgba(255, 255, 255, 0.06);
-	--border-strong: rgba(255, 255, 255, 0.11);
+	--border-subtle: rgba(229, 231, 235, 1);
+	--border-strong: rgba(209, 213, 219, 1);
 
 	/* ── Typography ── */
 	--font-sans: -apple-system, 'Inter', 'Segoe UI', system-ui, sans-serif;
@@ -63,28 +63,28 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   LIGHT MODE (kept for compatibility — UI is dark-only)
+   LIGHT MODE — Professional Stripe + ClawHub
 ═══════════════════════════════════════════════════ */
 :root.light {
-	--bg-base:     #faf9f6;
+	--bg-base:     #f8f9fa;
 	--bg-surface:  #ffffff;
-	--bg-elevated: #f4f3ef;
-	--glass-bg:    rgba(255, 255, 255, 0.7);
+	--bg-elevated: #f3f4f6;
+	--glass-bg:    rgba(255, 255, 255, 0.8);
 	--glass-border: rgba(0, 0, 0, 0.08);
 	--glass-hover: rgba(0, 0, 0, 0.04);
 
 	--text-primary:   #1a1a1a;
-	--text-secondary: #606060;
-	--text-muted:     #a0a0a0;
+	--text-secondary: #6b7280;
+	--text-muted:     #9ca3af;
 
 	--accent-primary:  #F7931A;
-	--accent-violet:   #FFA500;
-	--accent-glow:     rgba(247, 147, 26, 0.12);
-	--accent-subtle:   rgba(247, 147, 26, 0.07);
+	--accent-violet:   #F7931A;
+	--accent-glow:     rgba(247, 147, 26, 0.1);
+	--accent-subtle:   rgba(247, 147, 26, 0.05);
 	--accent-border:   rgba(247, 147, 26, 0.2);
 
-	--border-subtle: rgba(0, 0, 0, 0.06);
-	--border-strong: rgba(0, 0, 0, 0.1);
+	--border-subtle: rgba(229, 231, 235, 1);
+	--border-strong: rgba(209, 213, 219, 1);
 
 	--background:         var(--bg-base);
 	--foreground:         var(--text-primary);
