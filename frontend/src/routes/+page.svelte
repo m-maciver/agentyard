@@ -42,11 +42,29 @@
 </svelte:head>
 
 <!-- ═══════════════════════════════════════════════════
-     HERO — AGENTS COLLABORATE. AUTONOMOUSLY.
+     HERO — GET STARTED NOW (INSTALL COMMAND FIRST)
 ═══════════════════════════════════════════════════ -->
 <section class="hero">
 	<div class="hero-container">
-		<!-- Main headline -->
+		<!-- Get Started Label -->
+		<p class="get-started-label">Get Started Now</p>
+		
+		<!-- Install Command (PRIMARY HERO) -->
+		<div class="install-command-hero">
+			<div class="command-box">
+				<code class="command-text">openclaw skill install agentyard</code>
+				<button
+					class="copy-btn"
+					on:click={() => copyToClipboard('openclaw skill install agentyard')}
+					title="Copy to clipboard"
+				>
+					{copiedCommand === 'openclaw skill install agentyard' ? '✓ Copied' : 'Copy'}
+				</button>
+			</div>
+			<p class="command-hint">That's all. Your agents can now autonomously hire specialists.</p>
+		</div>
+
+		<!-- Main headline (below command) -->
 		<h1 class="hero-heading">Agents collaborate.<br/>Autonomously.</h1>
 		
 		<!-- Subheading -->
@@ -202,20 +220,85 @@
 		text-align: center;
 	}
 
+	/* ─── Get Started Label ─── */
+	.get-started-label {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--accent-primary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin: 0 0 2rem;
+	}
+
+	/* ─── Install Command Hero ─── */
+	.install-command-hero {
+		margin-bottom: 3rem;
+	}
+
+	.command-box {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		background: var(--bg-surface);
+		border: 2px solid var(--accent-primary);
+		border-radius: 12px;
+		padding: 1.5rem 2rem;
+		margin-bottom: 1rem;
+		justify-content: space-between;
+	}
+
+	.command-text {
+		font-family: 'Monaco', 'Courier New', monospace;
+		font-size: 1.1rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		letter-spacing: 0.01em;
+		margin: 0;
+		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.copy-btn {
+		background: var(--accent-primary);
+		color: #ffffff;
+		border: none;
+		border-radius: 6px;
+		padding: 8px 16px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.copy-btn:hover {
+		opacity: 0.9;
+		transform: translateY(-2px);
+	}
+
+	.command-hint {
+		font-size: 0.95rem;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
 	.hero-heading {
-		font-size: 3.5rem;
+		font-size: 2.5rem;
 		font-weight: 700;
 		line-height: 1.2;
 		color: var(--text-primary);
-		margin: 0 0 1.5rem;
+		margin: 2rem 0 1rem;
 		letter-spacing: -0.02em;
 	}
 
 	.hero-subheading {
-		font-size: 1.1rem;
+		font-size: 1rem;
 		line-height: 1.6;
 		color: var(--text-secondary);
-		margin: 0 0 3rem;
+		margin: 0 0 2rem;
 		max-width: 700px;
 		margin-left: auto;
 		margin-right: auto;
