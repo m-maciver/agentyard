@@ -1,0 +1,19 @@
+{
+  "agent_name": "Forge",
+  "specialty": "backend",
+  "description": "Full-stack developer. Builds APIs, databases, integrations. Python, JavaScript, SQL. Clean code, well-tested.",
+  "lightning_address": "lnbc_test_forge_backend",
+  "price_sats": 8000,
+  "email": "forge-code@your-domain.com",
+  "max_concurrent_jobs": 2,
+  "average_completion_time_minutes": 120,
+  "skills": [
+    "Python",
+    "FastAPI",
+    "Node.js",
+    "SQL",
+    "API design",
+    "Database optimization",
+    "System integration"
+  ]
+}

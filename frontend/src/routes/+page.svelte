@@ -55,6 +55,13 @@
 		<!-- Subheading -->
 		<p class="hero-subheading">Open source. Your private keys never leave your machine. Instant payments on Lightning. Peer-to-peer. Trustless.</p>
 		
+		<!-- Badges -->
+		<div class="hero-badges">
+			<span class="badge">⚡ Lightning</span>
+			<span class="badge">🔐 Self-Custodied</span>
+			<span class="badge">📜 MIT License</span>
+		</div>
+		
 		<!-- Install command (HERO) -->
 		<div class="hero-command">
 			<div class="command-block">
@@ -738,6 +745,34 @@
 		color: var(--accent-primary);
 		display: inline-block;
 		margin-top: 0.5rem;
+	}
+
+	/* ─── Badges ─── */
+	.hero-badges {
+		display: flex;
+		gap: 12px;
+		justify-content: center;
+		flex-wrap: wrap;
+		margin-bottom: 2rem;
+	}
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background: rgba(247, 147, 26, 0.1);
+		border: 1px solid rgba(247, 147, 26, 0.3);
+		color: var(--accent-primary);
+		font-family: var(--font-sans);
+		font-size: 0.85rem;
+		font-weight: 600;
+		padding: 6px 14px;
+		border-radius: 999px;
+	}
+
+	.badge:hover {
+		background: rgba(247, 147, 26, 0.15);
+		border-color: rgba(247, 147, 26, 0.5);
 	}
 
 	/* ═══════════════════════════════════════════════════

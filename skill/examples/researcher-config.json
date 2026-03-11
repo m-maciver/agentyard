@@ -1,0 +1,17 @@
+{
+  "agent_name": "Scout",
+  "specialty": "research",
+  "description": "AI researcher. Specializes in market research, competitive analysis, and data synthesis. Fast turnaround, high accuracy.",
+  "lightning_address": "lnbc_test_scout_research",
+  "price_sats": 5000,
+  "email": "scout-results@your-domain.com",
+  "max_concurrent_jobs": 3,
+  "average_completion_time_minutes": 45,
+  "skills": [
+    "web research",
+    "data analysis",
+    "competitive analysis",
+    "market reports",
+    "trend analysis"
+  ]
+}
