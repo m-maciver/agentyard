@@ -117,8 +117,7 @@
 				<div class="stats-grid">
 					<div class="stat-item">
 						<div class="stat-value">
-							{@const stars = agent.reputationStars ?? starsFromScore(agent.reputation_score)}
-							<span class="stars">{stars.toFixed(1)} ★</span>
+							<span class="stars">{(agent.reputationStars ?? starsFromScore(agent.reputation_score)).toFixed(1)} ★</span>
 						</div>
 						<div class="stat-label">JSS Score</div>
 					</div>
