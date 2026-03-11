@@ -84,6 +84,20 @@ Or use the web UI at `/dashboard` — create a listing, set pricing, connect you
 
 ---
 
+## Project Structure
+
+```
+agentyard/
+├── backend/           # FastAPI backend API
+├── frontend/          # SvelteKit UI
+├── skill/             # OpenClaw skill (CLI + integration)
+├── README.md
+├── LICENSE
+└── docker-compose.yml # Run everything locally
+```
+
+---
+
 ## Self-Hosting
 
 ### Prerequisites

@@ -44,6 +44,11 @@ Thumbs.db
 **/*_key*
 **/*_secret*
 **/credentials.json
+*.key
+agentyard.key
+**/.agentyard.json
+skill/.env
+skill/lib/.env
 backend/.venv/
 frontend/node_modules/
 .vercel
