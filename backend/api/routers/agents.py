@@ -156,76 +156,59 @@ def generate_api_key() -> str:
     return f"ay_live_{secrets.token_hex(32)}"
 
 
-# UUID route registered FIRST to take priority
-@router.get("/{agent_id}", response_model=AgentPublic)
-async def get_agent(agent_id: UUID, session: AsyncSession = Depends(get_session)):
-    """Get agent profile by ID (legacy JWT-registered agents)."""
-    result = await session.execute(select(Agent).where(Agent.id == agent_id))
-    agent = result.scalar_one_or_none()
-    if not agent:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "error": "agent_not_found",
-                "message": f"Agent with ID '{agent_id}' not found. Check the ID or run: openclaw skill install agentyard",
-                "docs": "https://agentyard.xyz/docs#agents",
-            },
-        )
-    return agent
-
-
-# Name route registered AFTER UUID route (lower priority)
-@router.get("/{agent_name}", response_model=AgentProfilePublic)
-async def get_agent_by_name(
-    agent_name: str,
+@router.get("/{identifier}", response_model=dict)
+async def get_agent_by_id_or_name(
+    identifier: str,
     session: AsyncSession = Depends(get_session),
 ):
-    """Get agent profile by name (skill-registered agents + JWT agents)."""
-    # Skip UUID-like strings (handled by the UUID endpoint above)
+    """
+    Get agent by UUID or name.
+    Tries UUID lookup first (legacy Agent table), then name lookup (AgentProfile table).
+    """
     import re
     UUID_PATTERN = re.compile(
         r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         re.IGNORECASE,
     )
-    if UUID_PATTERN.match(agent_name):
+
+    # If it looks like a UUID, search the legacy Agent table
+    if UUID_PATTERN.match(identifier):
+        from uuid import UUID as UUIDType
+        agent_uuid = UUIDType(identifier)
+        result = await session.execute(select(Agent).where(Agent.id == agent_uuid))
+        agent = result.scalar_one_or_none()
+        if agent:
+            return AgentPublic.model_validate(agent).model_dump()
         raise HTTPException(
             status_code=404,
             detail={
-                "error": "use_uuid_endpoint",
-                "message": "This looks like a UUID. Use /agents/{uuid} for legacy agent lookups.",
+                "error": "agent_not_found",
+                "message": f"Agent with ID '{identifier}' not found.",
                 "docs": "https://agentyard.xyz/docs#agents",
             },
         )
 
-    # Search both AgentProfile and Agent tables
-    # First try AgentProfile (skill-registered)
+    # Otherwise search by name in AgentProfile table
     result = await session.execute(
-        select(AgentProfile).where(AgentProfile.agent_name == agent_name)
+        select(AgentProfile).where(AgentProfile.agent_name == identifier)
     )
     profile = result.scalar_one_or_none()
     if profile:
-        return profile
-    
-    # Fall back to Agent table (JWT-registered agents)
+        return AgentProfilePublic.model_validate(profile).model_dump()
+
+    # Fall back to Agent table by name
     agent_result = await session.execute(
-        select(Agent).where(Agent.name == agent_name)
+        select(Agent).where(Agent.name == identifier)
     )
     agent = agent_result.scalar_one_or_none()
     if agent:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "error": "use_uuid_endpoint",
-                "message": f"Agent '{agent_name}' is a legacy agent. Use /agents/{agent.id} to fetch its profile.",
-                "docs": "https://agentyard.xyz/docs#agents",
-            },
-        )
-    
+        return AgentPublic.model_validate(agent).model_dump()
+
     raise HTTPException(
         status_code=404,
         detail={
             "error": "agent_not_found",
-            "message": f"Agent '{agent_name}' is not registered. Run: openclaw skill install agentyard",
+            "message": f"Agent '{identifier}' is not registered. Run: openclaw skill install agentyard",
             "docs": "https://agentyard.xyz/docs#registration",
         },
     )

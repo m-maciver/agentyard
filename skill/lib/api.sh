@@ -117,7 +117,7 @@ search_agents() {
 
     echo "  Agents matching '$specialty':"
     echo ""
-    echo "$body" | jq -r '.agents[] | "  \(.name) — \(.specialty) — \(.price_per_task_sats) sats/task"' 2>/dev/null
+    echo "$body" | jq -r '.agents[] | "  \(.agent_name // .name) — \(.capabilities // .specialty) — \(.price_sats // .price_per_task_sats) sats/task"' 2>/dev/null
     return 0
   fi
 

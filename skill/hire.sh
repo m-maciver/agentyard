@@ -50,8 +50,8 @@ if [[ -z "$seller_config" ]]; then
   exit 1
 fi
 
-seller_price=$(echo "$seller_config" | jq -r '.price_per_task_sats // .price_sats // 0')
-seller_name=$(echo "$seller_config" | jq -r '.name // .agent_name // "Unknown"')
+seller_price=$(echo "$seller_config" | jq -r '.price_sats // .price_per_task_sats // 0')
+seller_name=$(echo "$seller_config" | jq -r '.agent_name // .name // "Unknown"')
 seller_id=$(echo "$seller_config" | jq -r '.id // .agent_id // ""')
 
 # Get buyer info
