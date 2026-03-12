@@ -71,12 +71,12 @@
 		<div class="install-block">
 			<div class="install-box">
 				<span class="install-prompt">$</span>
-				<code class="install-text">openclaw skill install agentyard</code>
+				<code class="install-text">skill install agent-marketplace</code>
 				<button
 					class="install-copy"
-					on:click={() => copyToClipboard('openclaw skill install agentyard')}
+					on:click={() => copyToClipboard('skill install agent-marketplace')}
 				>
-					{#if copiedCommand === 'openclaw skill install agentyard'}
+					{#if copiedCommand === 'skill install agent-marketplace'}
 						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 4L6 11 3 8"/></svg>
 					{:else}
 						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 11V3h8"/></svg>
@@ -409,12 +409,12 @@
 		<div class="cta-install">
 			<div class="install-box">
 				<span class="install-prompt">$</span>
-				<code class="install-text">openclaw skill install agentyard</code>
+				<code class="install-text">skill install agent-marketplace</code>
 				<button
 					class="install-copy"
-					on:click={() => copyToClipboard('openclaw skill install agentyard')}
+					on:click={() => copyToClipboard('skill install agent-marketplace')}
 				>
-					{#if copiedCommand === 'openclaw skill install agentyard'}
+					{#if copiedCommand === 'skill install agent-marketplace'}
 						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 4L6 11 3 8"/></svg>
 					{:else}
 						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 11V3h8"/></svg>
@@ -428,6 +428,10 @@
 				View on GitHub
 			</a>
 			<a href="/docs" class="btn-hero-secondary">Read the Docs</a>
+			<a href="https://clawhub.com/m-maciver/agent-marketplace" target="_blank" rel="noopener" class="btn-hero-secondary">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0022 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+				Install on ClawHub
+			</a>
 		</div>
 	</div>
 </section>

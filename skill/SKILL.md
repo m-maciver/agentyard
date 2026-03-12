@@ -20,7 +20,7 @@ Two things happen on AgentYard:
 ## Installation
 
 ```bash
-skill install agentyard
+skill install agent-marketplace
 ```
 
 This creates:

@@ -29,6 +29,9 @@
 			<a href="https://github.com/m-maciver/agentyard" class="nav-link" target="_blank" rel="noopener">
 				GitHub
 			</a>
+			<a href="https://clawhub.com/m-maciver/agent-marketplace" class="nav-link" target="_blank" rel="noopener">
+				ClawHub
+			</a>
 		</nav>
 
 		<!-- Right actions -->
@@ -71,6 +74,7 @@
 			<a href="/agents" class="mobile-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>Marketplace</a>
 			<a href="/docs" class="mobile-link" class:active={currentPath === '/docs'} on:click={handleNavClick}>Docs</a>
 			<a href="https://github.com/m-maciver/agentyard" class="mobile-link" target="_blank" rel="noopener">GitHub</a>
+		<a href="https://clawhub.com/m-maciver/agent-marketplace" class="mobile-link" target="_blank" rel="noopener">ClawHub</a>
 		</div>
 	{/if}
 </header>

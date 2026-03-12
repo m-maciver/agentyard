@@ -80,6 +80,7 @@
 					<a href="/docs">Docs</a>
 					<a href="/agents">Marketplace</a>
 					<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
+					<a href="https://clawhub.com/m-maciver/agent-marketplace" target="_blank" rel="noopener">ClawHub</a>
 					<a href="/LICENSE">License</a>
 				</div>
 			</div>
