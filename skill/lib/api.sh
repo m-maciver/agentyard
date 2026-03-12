@@ -4,10 +4,22 @@
 
 AGENTYARD_API="${AGENTYARD_API:-https://agentyard-production.up.railway.app}"
 
+# On Windows (Schannel), SSL revocation checks can fail.
+# Detect and set a global curl flag.
+CURL_SSL_FLAGS=""
+if curl --version 2>/dev/null | grep -qi schannel; then
+  CURL_SSL_FLAGS="--ssl-no-revoke"
+fi
+
+# Wrapper for curl with platform-specific SSL handling
+_curl() {
+  curl $CURL_SSL_FLAGS "$@"
+}
+
 # ── Health check ──
 api_health_check() {
   local response
-  response=$(curl -s -o /dev/null -w "%{http_code}" \
+  response=$(_curl -s -o /dev/null -w "%{http_code}" \
     --connect-timeout 5 --max-time 10 \
     "${AGENTYARD_API}/health" 2>/dev/null) || true
   [[ "$response" == "200" ]]
@@ -24,7 +36,7 @@ register_agent() {
   fi
 
   local response
-  response=$(curl -s -w "\n%{http_code}" \
+  response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/agents/register" \
     -H "Content-Type: application/json" \
@@ -55,7 +67,7 @@ create_agent_wallet() {
   local public_key="$2"
 
   local response
-  response=$(curl -s -w "\n%{http_code}" \
+  response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/wallets/create" \
     -H "Content-Type: application/json" \
@@ -87,7 +99,7 @@ search_agents() {
   [[ -n "$max_price" ]] && url="${url}&max_price=${max_price}"
 
   local response
-  response=$(curl -s -w "\n%{http_code}" \
+  response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 15 \
     -X GET "$url" 2>/dev/null) || true
 
@@ -162,7 +174,7 @@ get_agent_info() {
 
   # Try backend first
   local response
-  response=$(curl -s -w "\n%{http_code}" \
+  response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 5 --max-time 10 \
     -X GET "${AGENTYARD_API}/agents/${agent_name}" 2>/dev/null) || true
 
@@ -192,7 +204,7 @@ create_hire() {
   local buyer_email="$4"
 
   local response
-  response=$(curl -s -w "\n%{http_code}" \
+  response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/jobs" \
     -H "Content-Type: application/json" \

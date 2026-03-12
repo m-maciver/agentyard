@@ -33,11 +33,14 @@ class AgentProfile(SQLModel, table=True):
 
 class AgentRegisterRequest(SQLModel):
     agent_name: str
-    public_key: str          # base64 Ed25519 pubkey
-    role: str                # BUYER_ONLY | SELLER | BOTH
+    public_key: str          # hex Ed25519 pubkey
+    role: str = "SELLER"     # BUYER_ONLY | SELLER | BOTH
     capabilities: Optional[str] = None
+    specialty: Optional[str] = None  # Alias for capabilities (from CLI)
+    description: Optional[str] = None  # Human-readable description
     price_sats: Optional[int] = None
     openclaw_user_id: Optional[str] = None  # GitHub user ID if linked
+    lightning_address: Optional[str] = None  # From CLI wallet generation
 
 
 class AgentProfilePublic(SQLModel):

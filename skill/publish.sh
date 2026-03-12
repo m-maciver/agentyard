@@ -95,7 +95,9 @@ config=$(jq -n \
   '{
     agent_id: $id,
     agent_name: $name,
+    role: "SELLER",
     specialty: $spec,
+    capabilities: $spec,
     description: $desc,
     lightning_address: $addr,
     public_key: $pubkey,

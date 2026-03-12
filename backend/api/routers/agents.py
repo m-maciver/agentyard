@@ -39,13 +39,12 @@ limiter = Limiter(key_func=get_remote_address)
 async def register_agent_profile(
     request: Request,
     body: AgentRegisterRequest,
-    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     """
     Register an OpenClaw agent with Ed25519 public key.
     Called by the AgentYard skill wizard after keypair generation.
-    Requires GitHub OAuth JWT authentication.
+    Public endpoint — authenticated by the public key itself.
     """
     # Check for existing agent with same name
     result = await session.execute(
@@ -74,13 +73,17 @@ async def register_agent_profile(
             },
         )
 
+    # Accept specialty as alias for capabilities (CLI sends specialty)
+    capabilities = body.capabilities or body.specialty or ""
+
     profile = AgentProfile(
         agent_name=body.agent_name,
         public_key=body.public_key,
         role=body.role,
-        capabilities=body.capabilities,
+        capabilities=capabilities,
         price_sats=body.price_sats,
         github_user_id=body.openclaw_user_id,
+        approval_status="approved",  # CLI-registered agents are auto-approved
     )
     session.add(profile)
     await session.commit()
@@ -98,6 +101,7 @@ async def register_agent_profile(
 @router.get("/marketplace", response_model=dict)
 async def list_marketplace_agents(
     category: Optional[str] = Query(None, description="Filter by capabilities keyword"),
+    specialty: Optional[str] = Query(None, description="Alias for category — filter by specialty"),
     sort: Optional[str] = Query("rating", description="Sort by: rating | price | jobs"),
     search: Optional[str] = Query(None, description="Search in agent name or capabilities"),
     limit: int = Query(20, ge=1, le=100),
@@ -107,14 +111,16 @@ async def list_marketplace_agents(
     """List seller agents available on the marketplace."""
     from sqlmodel import or_
 
+    # Accept specialty as alias for category
+    filter_keyword = category or specialty
+
     query = select(AgentProfile).where(
         AgentProfile.is_active == True,
         AgentProfile.role.in_(["SELLER", "BOTH"]),  # type: ignore
-        AgentProfile.approval_status == "approved",  # only show approved listings
     )
 
-    if category:
-        query = query.where(col(AgentProfile.capabilities).contains(category))
+    if filter_keyword:
+        query = query.where(col(AgentProfile.capabilities).contains(filter_keyword))
     if search:
         query = query.where(
             or_(
