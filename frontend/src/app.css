@@ -1,41 +1,47 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   DESIGN TOKENS — Dark theme (default)
+   DESIGN TOKENS — Light theme (default)
 ═══════════════════════════════════════════════════ */
 :root {
-	/* ── Backgrounds — Professional Light Theme ── */
-	--bg-base:     #f8f9fa;
-	--bg-surface:  #ffffff;
-	--bg-elevated: #f3f4f6;
-	--glass-bg:    rgba(255, 255, 255, 0.8);
-	--glass-border: rgba(229, 231, 235, 1);
-	--glass-hover: rgba(243, 244, 246, 1);
+	/* ── Backgrounds ── */
+	--bg-base:     #ffffff;
+	--bg-surface:  #fafafa;
+	--bg-elevated: #f4f4f5;
+	--glass-bg:    rgba(255, 255, 255, 0.85);
+	--glass-border: rgba(0, 0, 0, 0.06);
+	--glass-hover: rgba(0, 0, 0, 0.03);
 
 	/* ── Text ── */
-	--text-primary:   #1a1a1a;
-	--text-secondary: #6b7280;
-	--text-muted:     #9ca3af;
+	--text-primary:   #09090b;
+	--text-secondary: #71717a;
+	--text-muted:     #a1a1aa;
 
-	/* ── Accent — Orange (sparingly) ── */
-	--accent-primary:  #F7931A;
-	--accent-violet:   #F7931A;
-	--accent-glow:     rgba(247, 147, 26, 0.1);
-	--accent-subtle:   rgba(247, 147, 26, 0.05);
-	--accent-border:   rgba(247, 147, 26, 0.2);
+	/* ── Accent — Indigo/Violet ── */
+	--accent-primary:  #6366f1;
+	--accent-secondary: #8b5cf6;
+	--accent-glow:     rgba(99, 102, 241, 0.15);
+	--accent-subtle:   rgba(99, 102, 241, 0.06);
+	--accent-border:   rgba(99, 102, 241, 0.2);
+
+	/* ── Gradient ── */
+	--gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+	--gradient-text:    linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+	--gradient-subtle:  linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
 
 	/* ── Lightning / Sats ── */
-	--sats-color: #F7931A;
+	--sats-color: #f59e0b;
 
 	/* ── Borders ── */
-	--border-subtle: rgba(229, 231, 235, 1);
-	--border-strong: rgba(209, 213, 219, 1);
+	--border-subtle: rgba(0, 0, 0, 0.06);
+	--border-strong: rgba(0, 0, 0, 0.1);
 
 	/* ── Typography ── */
-	--font-sans: -apple-system, 'Inter', 'Segoe UI', system-ui, sans-serif;
-	--font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+	--font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+	--font-display: 'Inter', -apple-system, system-ui, sans-serif;
+	--font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
 
-	/* ── Legacy compat (still referenced by components) ── */
+	/* ── Legacy compat ── */
 	--background:         var(--bg-base);
 	--foreground:         var(--text-primary);
 	--card:               var(--bg-surface);
@@ -59,32 +65,36 @@
 	--surface-0: var(--bg-base);
 	--surface-1: var(--bg-surface);
 	--surface-2: var(--bg-elevated);
-	--surface-3: rgba(255, 255, 255, 0.05);
+	--surface-3: rgba(0, 0, 0, 0.03);
 }
 
 /* ═══════════════════════════════════════════════════
-   LIGHT MODE — Professional Stripe + ClawHub
+   DARK MODE
 ═══════════════════════════════════════════════════ */
-:root.light {
-	--bg-base:     #f8f9fa;
-	--bg-surface:  #ffffff;
-	--bg-elevated: #f3f4f6;
-	--glass-bg:    rgba(255, 255, 255, 0.8);
-	--glass-border: rgba(0, 0, 0, 0.08);
-	--glass-hover: rgba(0, 0, 0, 0.04);
+:root.dark {
+	--bg-base:     #09090b;
+	--bg-surface:  #111113;
+	--bg-elevated: #18181b;
+	--glass-bg:    rgba(17, 17, 19, 0.8);
+	--glass-border: rgba(255, 255, 255, 0.06);
+	--glass-hover: rgba(255, 255, 255, 0.04);
 
-	--text-primary:   #1a1a1a;
-	--text-secondary: #6b7280;
-	--text-muted:     #9ca3af;
+	--text-primary:   #fafafa;
+	--text-secondary: #a1a1aa;
+	--text-muted:     #71717a;
 
-	--accent-primary:  #F7931A;
-	--accent-violet:   #F7931A;
-	--accent-glow:     rgba(247, 147, 26, 0.1);
-	--accent-subtle:   rgba(247, 147, 26, 0.05);
-	--accent-border:   rgba(247, 147, 26, 0.2);
+	--accent-primary:  #818cf8;
+	--accent-secondary: #a78bfa;
+	--accent-glow:     rgba(129, 140, 248, 0.15);
+	--accent-subtle:   rgba(129, 140, 248, 0.08);
+	--accent-border:   rgba(129, 140, 248, 0.2);
 
-	--border-subtle: rgba(229, 231, 235, 1);
-	--border-strong: rgba(209, 213, 219, 1);
+	--gradient-primary: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c4b5fd 100%);
+	--gradient-text:    linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #f472b6 100%);
+	--gradient-subtle:  linear-gradient(135deg, rgba(129, 140, 248, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%);
+
+	--border-subtle: rgba(255, 255, 255, 0.06);
+	--border-strong: rgba(255, 255, 255, 0.1);
 
 	--background:         var(--bg-base);
 	--foreground:         var(--text-primary);
@@ -105,7 +115,7 @@
 	--surface-0: var(--bg-base);
 	--surface-1: var(--bg-surface);
 	--surface-2: var(--bg-elevated);
-	--surface-3: rgba(0, 0, 0, 0.04);
+	--surface-3: rgba(255, 255, 255, 0.03);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -135,8 +145,8 @@ html, body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-	font-family: var(--font-sans);
-	letter-spacing: -0.01em;
+	font-family: var(--font-display);
+	letter-spacing: -0.025em;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -161,7 +171,7 @@ h1, h2, h3, h4, h5, h6 {
    TYPOGRAPHY HELPERS
 ═══════════════════════════════════════════════════ */
 .font-display {
-	font-family: var(--font-sans) !important;
+	font-family: var(--font-display) !important;
 	font-weight: 700;
 }
 
@@ -171,6 +181,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .font-body {
 	font-family: var(--font-sans) !important;
+}
+
+.gradient-text {
+	background: var(--gradient-text);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -194,7 +211,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ═══════════════════════════════════════════════════
-   ANIMATED BACKGROUND — subtle grid for hero
+   ANIMATED BACKGROUND
 ═══════════════════════════════════════════════════ */
 @keyframes grid-drift {
 	0%   { background-position: 0 0; }
@@ -205,25 +222,25 @@ h1, h2, h3, h4, h5, h6 {
 	position: absolute;
 	inset: 0;
 	background-image:
-		linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+		linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
 	background-size: 40px 40px;
 	animation: grid-drift 12s linear infinite;
 	pointer-events: none;
 }
 
-:root.light .hero-bg {
+:root.dark .hero-bg {
 	background-image:
-		linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+		linear-gradient(rgba(129, 140, 248, 0.04) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(129, 140, 248, 0.04) 1px, transparent 1px);
 }
 
 /* ═══════════════════════════════════════════════════
-   PULSE DOT — bitcoin orange
+   PULSE DOT
 ═══════════════════════════════════════════════════ */
 @keyframes pulse-ring {
-	0%, 100% { box-shadow: 0 0 0 0 rgba(247, 147, 26, 0.4); }
-	50%       { box-shadow: 0 0 0 4px rgba(247, 147, 26, 0.12); }
+	0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+	50%       { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12); }
 }
 
 .pulse-dot {
@@ -249,8 +266,8 @@ h1, h2, h3, h4, h5, h6 {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	background: var(--accent-primary);
-	color: var(--primary-foreground);
+	background: var(--gradient-primary);
+	color: #ffffff;
 	font-family: var(--font-sans);
 	font-weight: 600;
 	font-size: 14px;
@@ -265,7 +282,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover {
 	opacity: 0.9;
 	transform: translateY(-1px);
-	box-shadow: 0 4px 16px var(--accent-glow);
+	box-shadow: 0 4px 24px var(--accent-glow);
 }
 
 .btn-ghost {
@@ -288,8 +305,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-ghost:hover {
 	color: var(--text-primary);
-	border-color: var(--border-strong);
-	background: var(--glass-hover);
+	border-color: var(--accent-primary);
+	background: var(--accent-subtle);
 }
 
 /* ═══════════════════════════════════════════════════

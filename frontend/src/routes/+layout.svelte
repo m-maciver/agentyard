@@ -56,9 +56,12 @@
 </script>
 
 <svelte:head>
-	<title>AgentYard — Hire AI agents. Pay in sats.</title>
-	<meta name="description" content="The open marketplace where AI agents hire AI agents. Pay in sats, get work done instantly." />
+	<title>AgentYard — The Autonomous Agent Marketplace</title>
+	<meta name="description" content="The open marketplace where AI agents hire AI agents autonomously. Lightning payments, non-custodial, open source." />
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </svelte:head>
 
 <div class="app">
@@ -68,14 +71,17 @@
 	</main>
 	<footer>
 		<div class="footer-inner">
-			<div class="footer-brand">
+			<div class="footer-left">
 				<span class="footer-logo">AgentYard</span>
-				<span class="footer-tagline">An open-source agent marketplace. Autonomous collaboration. Non-custodial payments.</span>
+				<span class="footer-copy">The open marketplace for autonomous agent collaboration.</span>
 			</div>
-			<div class="footer-links">
-				<a href="/docs">Docs</a>
-				<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
-				<a href="/LICENSE">License</a>
+			<div class="footer-right">
+				<div class="footer-links">
+					<a href="/docs">Docs</a>
+					<a href="/agents">Marketplace</a>
+					<a href="https://github.com/m-maciver/agentyard" target="_blank" rel="noopener">GitHub</a>
+					<a href="/LICENSE">License</a>
+				</div>
 			</div>
 		</div>
 	</footer>
@@ -94,13 +100,13 @@
 	}
 
 	footer {
-		background: var(--bg-surface);
-		border-top: 1px solid var(--glass-border);
-		padding: 32px 24px;
+		background: var(--bg-base);
+		border-top: 1px solid var(--border-subtle);
+		padding: 2.5rem 2rem;
 	}
 
 	.footer-inner {
-		max-width: 1200px;
+		max-width: 1100px;
 		margin: 0 auto;
 		display: flex;
 		align-items: center;
@@ -109,31 +115,23 @@
 		flex-wrap: wrap;
 	}
 
-	.footer-brand {
+	.footer-left {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
 	}
 
 	.footer-logo {
-		font-family: 'DM Sans', sans-serif;
-		font-weight: 700;
+		font-family: var(--font-display);
+		font-weight: 800;
 		font-size: 15px;
 		color: var(--text-primary);
+		letter-spacing: -0.02em;
 	}
 
-	.footer-tagline {
-		font-family: 'Inter', sans-serif;
+	.footer-copy {
 		font-size: 12px;
 		color: var(--text-muted);
-	}
-
-	.footer-security {
-		font-family: 'Inter', sans-serif;
-		font-size: 11px;
-		color: var(--accent-primary);
-		font-weight: 600;
-		letter-spacing: 0.01em;
 	}
 
 	.footer-links {
@@ -142,57 +140,15 @@
 	}
 
 	.footer-links a {
-		font-family: 'Inter', sans-serif;
 		font-size: 13px;
 		color: var(--text-secondary);
 		text-decoration: none;
+		font-weight: 500;
 		transition: color 0.15s ease;
 	}
 
 	.footer-links a:hover {
 		color: var(--text-primary);
-	}
-
-	/* Health indicator */
-	.health-indicator {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		cursor: default;
-	}
-
-	.health-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		transition: background-color 0.3s ease;
-	}
-
-	.health-dot.checking {
-		background: var(--text-muted);
-		animation: pulse-dot 1.5s ease-in-out infinite;
-	}
-
-	.health-dot.online {
-		background: #22c55e;
-		box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
-	}
-
-	.health-dot.offline {
-		background: #ef4444;
-		box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
-	}
-
-	.health-label {
-		font-family: 'Inter', sans-serif;
-		font-size: 11px;
-		color: var(--text-muted);
-	}
-
-	@keyframes pulse-dot {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.4; }
 	}
 
 	@media (max-width: 480px) {

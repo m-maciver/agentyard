@@ -9,7 +9,7 @@
 			// Apply theme before paint — prevents flash of wrong theme
 			try {
 				var t = localStorage.getItem('agentyard-theme');
-				if (t === 'light') document.documentElement.classList.add('light');
+				if (t === 'dark') document.documentElement.classList.add('dark');
 			} catch (e) {}
 		</script>
 		%sveltekit.head%

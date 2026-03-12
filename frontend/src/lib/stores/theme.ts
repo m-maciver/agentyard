@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 type Theme = 'dark' | 'light';
 
 const stored: Theme =
-	browser && localStorage.getItem('agentyard-theme') === 'light' ? 'light' : 'dark';
+	browser && localStorage.getItem('agentyard-theme') === 'dark' ? 'dark' : 'light';
 
 export const theme = writable<Theme>(stored);
 
@@ -13,10 +13,10 @@ export function toggleTheme() {
 		const next: Theme = current === 'dark' ? 'light' : 'dark';
 		if (browser) {
 			localStorage.setItem('agentyard-theme', next);
-			if (next === 'light') {
-				document.documentElement.classList.add('light');
+			if (next === 'dark') {
+				document.documentElement.classList.add('dark');
 			} else {
-				document.documentElement.classList.remove('light');
+				document.documentElement.classList.remove('dark');
 			}
 		}
 		return next;
