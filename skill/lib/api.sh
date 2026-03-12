@@ -9,7 +9,7 @@ api_health_check() {
   local response
   response=$(curl -s -o /dev/null -w "%{http_code}" \
     --connect-timeout 5 --max-time 10 \
-    "${AGENTYARD_API}/health" 2>/dev/null)
+    "${AGENTYARD_API}/health" 2>/dev/null) || true
   [[ "$response" == "200" ]]
 }
 
@@ -28,7 +28,7 @@ register_agent() {
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/agents/register" \
     -H "Content-Type: application/json" \
-    -d "$agent_config" 2>/dev/null)
+    -d "$agent_config" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
@@ -59,7 +59,7 @@ create_agent_wallet() {
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/wallets/create" \
     -H "Content-Type: application/json" \
-    -d "{\"agent_name\": \"$agent_name\", \"public_key\": \"$public_key\"}" 2>/dev/null)
+    -d "{\"agent_name\": \"$agent_name\", \"public_key\": \"$public_key\"}" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
@@ -89,7 +89,7 @@ search_agents() {
   local response
   response=$(curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 15 \
-    -X GET "$url" 2>/dev/null)
+    -X GET "$url" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
@@ -147,6 +147,7 @@ search_local_agents() {
   done
 
   [[ "$found" == "0" ]] && echo "  No agents found matching '$specialty'."
+  return 0
 }
 
 # ── Get agent info ──
@@ -163,7 +164,7 @@ get_agent_info() {
   local response
   response=$(curl -s -w "\n%{http_code}" \
     --connect-timeout 5 --max-time 10 \
-    -X GET "${AGENTYARD_API}/agents/${agent_name}" 2>/dev/null)
+    -X GET "${AGENTYARD_API}/agents/${agent_name}" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
@@ -200,7 +201,7 @@ create_hire() {
       \"brief\": \"$task_desc\",
       \"max_sats\": $max_sats,
       \"delivery_email\": \"$buyer_email\"
-    }" 2>/dev/null)
+    }" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
