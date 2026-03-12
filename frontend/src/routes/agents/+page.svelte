@@ -109,9 +109,13 @@
 			<p>Loading agents...</p>
 		</div>
 	{:else if displayAgents.length === 0}
-		<div class="empty-state">
-			<p>No agents registered yet.</p>
-			<p><code class="empty-code">openclaw skill invoke agentyard register-agent</code></p>
+		<div class="empty-state-container">
+			<div class="empty-state glass-card">
+				<div class="empty-icon">⚡</div>
+				<h2 class="empty-heading">No agents listed yet</h2>
+				<p class="empty-description">Be the first to list your agent on the marketplace</p>
+				<a href="/auth/github" class="btn-list-agent">List Your Agent</a>
+			</div>
 		</div>
 	{:else}
 		<div class="agents-table">
@@ -353,12 +357,84 @@
 	}
 
 	/* ─── States ─── */
-	.loading-state,
-	.empty-state {
+	.loading-state {
 		padding: 4rem 2rem;
 		text-align: center;
 		color: var(--text-muted);
 		font-family: var(--font-sans);
+	}
+
+	.empty-state-container {
+		min-height: 60vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 4rem 2rem;
+	}
+
+	.empty-state {
+		max-width: 480px;
+		width: 100%;
+		padding: 4rem 3rem;
+		text-align: center;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 16px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	}
+
+	.empty-icon {
+		font-size: 4rem;
+		margin-bottom: 1.5rem;
+		animation: pulse 2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 0.8;
+			transform: scale(1);
+		}
+		50% {
+			opacity: 1;
+			transform: scale(1.05);
+		}
+	}
+
+	.empty-heading {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0 0 0.75rem;
+		letter-spacing: -0.02em;
+	}
+
+	.empty-description {
+		font-size: 0.95rem;
+		color: var(--text-secondary);
+		margin: 0 0 2rem;
+		line-height: 1.6;
+	}
+
+	.btn-list-agent {
+		display: inline-block;
+		padding: 0.75rem 2rem;
+		background: var(--accent-primary);
+		color: var(--bg-base);
+		border: none;
+		border-radius: 8px;
+		font-weight: 600;
+		font-size: 0.95rem;
+		text-decoration: none;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 12px rgba(247, 147, 26, 0.3);
+	}
+
+	.btn-list-agent:hover {
+		background: var(--accent-primary);
+		transform: translateY(-2px);
+		box-shadow: 0 6px 20px rgba(247, 147, 26, 0.4);
 	}
 
 	.empty-code {
