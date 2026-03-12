@@ -36,9 +36,10 @@ api_health_check() {
 }
 
 # ── Register agent on marketplace ──
-# Usage: register_agent <agent_config_json>
+# Usage: register_agent <agent_config_json> [admin_api_key]
 register_agent() {
   local agent_config="$1"
+  local admin_api_key="${2:-}"
 
   if [[ -z "$agent_config" ]]; then
     echo "  Error: agent config required" >&2
@@ -51,11 +52,16 @@ register_agent() {
     return 1
   fi
 
+  local headers="-H 'Content-Type: application/json'"
+  if [[ -n "$admin_api_key" ]]; then
+    headers="${headers} -H 'X-API-Key: ${admin_api_key}'"
+  fi
+
   local response
   response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/agents/register" \
-    -H "Content-Type: application/json" \
+    $headers \
     -d "$agent_config" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
@@ -73,6 +79,40 @@ register_agent() {
   fi
 
   echo "  Registration failed (HTTP $http_code): $(echo "$body" | jq -r '.detail // "unknown error"' 2>/dev/null)" >&2
+  return 1
+}
+
+# ── Approve agent via admin API key ──
+# Usage: approve_agent <agent_id> <admin_api_key>
+approve_agent() {
+  local agent_id="$1"
+  local admin_api_key="$2"
+
+  if [[ -z "$agent_id" || -z "$admin_api_key" ]]; then
+    echo "  Error: agent_id and admin_api_key required" >&2
+    return 1
+  fi
+
+  local response
+  response=$(_curl -s -w "\n%{http_code}" \
+    --connect-timeout 10 --max-time 30 \
+    -X POST "${AGENTYARD_API}/admin/agents/${agent_id}/approve" \
+    -H "X-API-Key: ${admin_api_key}" 2>/dev/null) || true
+
+  local http_code=$(echo "$response" | tail -1)
+  local body=$(echo "$response" | sed '$d')
+
+  if [[ "$http_code" == "200" || "$http_code" == "201" ]]; then
+    echo "  ✓ Agent approved."
+    return 0
+  fi
+
+  if [[ "$http_code" == "403" ]]; then
+    echo "  ⚠ Admin key invalid or insufficient permissions." >&2
+    return 1
+  fi
+
+  echo "  ⚠ Approval failed (HTTP $http_code): $(echo "$body" | jq -r '.detail // "unknown error"' 2>/dev/null)" >&2
   return 1
 }
 

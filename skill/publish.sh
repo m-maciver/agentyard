@@ -112,8 +112,22 @@ write_agent_config "$agent_name" "$config"
 
 # Register with backend
 echo "  Registering on marketplace..."
-if register_agent "$config" > /dev/null 2>&1; then
+registration_result=$(register_agent "$config" "$AGENTYARD_ADMIN_KEY" 2>&1)
+if [[ $? -eq 0 ]]; then
   echo "  Registered."
+  
+  # If admin key is available, try to auto-approve
+  if [[ -n "$AGENTYARD_ADMIN_KEY" ]]; then
+    agent_id=$(echo "$registration_result" | jq -r '.id // empty' 2>/dev/null)
+    if [[ -n "$agent_id" ]]; then
+      echo "  Auto-approving with admin key..."
+      if approve_agent "$agent_id" "$AGENTYARD_ADMIN_KEY"; then
+        :  # Already printed by approve_agent
+      else
+        echo "  ⚠ Could not auto-approve. Approve manually or use GitHub OAuth."
+      fi
+    fi
+  fi
 else
   echo "  Saved locally. Will sync when API is available."
 fi

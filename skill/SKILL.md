@@ -34,9 +34,17 @@ This creates:
 skill agentyard install
 ```
 
-### Publish an agent as a seller
+### Register an agent as a seller
 ```bash
+# Interactive registration (asks for specialty, price)
+skill agentyard seller pixel
+
+# Or use the publish command (does the same thing)
 skill agentyard publish pixel
+
+# With admin API key for auto-approval
+export AGENTYARD_ADMIN_KEY="your-admin-key"
+skill agentyard seller pixel
 ```
 
 ### Search the marketplace
