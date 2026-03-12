@@ -1,49 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { authStore, isLoggedIn } from '$lib/stores/auth';
 	import { theme, toggleTheme } from '$lib/stores/theme';
-	import { dev } from '$app/environment';
-	import { signInWithGitHub, type GitHubUser } from '$lib/auth';
 
 	let menuOpen = false;
-	let userMenuOpen = false;
 
 	$: currentPath = $page.url.pathname;
-	$: user = $authStore as GitHubUser | null;
 
 	function handleNavClick() {
 		menuOpen = false;
-		userMenuOpen = false;
-	}
-
-	function handleSignIn() {
-		signInWithGitHub();
-	}
-
-	function handleSignOut() {
-		authStore.logout();
-		userMenuOpen = false;
-	}
-
-	function setMockLogin() {
-		authStore.login({
-			id: 'dev-user-001',
-			githubUsername: 'm-maciver',
-			githubAvatar: 'https://avatars.githubusercontent.com/u/1?v=4',
-			agentName: 'Atlas',
-			walletBalance: 34500
-		});
-		userMenuOpen = false;
-	}
-
-	function handleOutsideClick(e: MouseEvent) {
-		if (userMenuOpen) {
-			userMenuOpen = false;
-		}
 	}
 </script>
-
-<svelte:window on:click={handleOutsideClick} />
 
 <header class="header">
 	<div class="header-inner">
@@ -88,69 +54,6 @@
 				{/if}
 			</button>
 
-			{#if $isLoggedIn && user}
-				<!-- User menu -->
-				<div class="user-menu-wrap">
-					<button
-						class="user-btn"
-						on:click|stopPropagation={() => (userMenuOpen = !userMenuOpen)}
-						aria-label="User menu"
-					>
-						{#if user.githubAvatar}
-							<img src={user.githubAvatar} alt={user.githubUsername} class="avatar-img" />
-						{:else}
-							<div class="avatar-fallback">{user.githubUsername[0].toUpperCase()}</div>
-						{/if}
-						<span class="username">@{user.githubUsername}</span>
-						<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M2 4l4 4 4-4" stroke-linecap="round"/>
-						</svg>
-					</button>
-
-					{#if userMenuOpen}
-						<div class="user-dropdown" role="menu" on:click|stopPropagation={() => {}} on:keydown={() => {}}>
-							{#if user.walletBalance !== undefined}
-								<div class="wallet-row">
-									<span class="wallet-label">Balance</span>
-									<span class="wallet-amount">{user.walletBalance.toLocaleString()} sats</span>
-								</div>
-								<div class="dropdown-divider"></div>
-							{/if}
-							<a href="/dashboard" class="dropdown-item" on:click={handleNavClick}>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-								Dashboard
-							</a>
-							<a href="/dashboard/listings" class="dropdown-item" on:click={handleNavClick}>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-								Listings
-							</a>
-							<a href="/dashboard/wallet" class="dropdown-item" on:click={handleNavClick}>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12V8H6a2 2 0 01-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><circle cx="18" cy="14" r="1"/></svg>
-								Wallet
-							</a>
-							<div class="dropdown-divider"></div>
-							<button class="dropdown-item dropdown-signout" on:click={handleSignOut}>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-								Sign out
-							</button>
-						</div>
-					{/if}
-				</div>
-			{:else}
-				<button class="connect-btn" on:click={handleSignIn}>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-					</svg>
-					Sign in
-				</button>
-
-				{#if dev}
-					<button class="dev-login-btn" on:click={setMockLogin} title="Dev login">
-						Dev
-					</button>
-				{/if}
-			{/if}
-
 			<!-- Mobile hamburger -->
 			<button class="hamburger" on:click|stopPropagation={() => (menuOpen = !menuOpen)} aria-label="Menu">
 				{#if menuOpen}
@@ -168,23 +71,6 @@
 			<a href="/agents" class="mobile-link" class:active={currentPath === '/agents'} on:click={handleNavClick}>Marketplace</a>
 			<a href="/docs" class="mobile-link" class:active={currentPath === '/docs'} on:click={handleNavClick}>Docs</a>
 			<a href="https://github.com/m-maciver/agentyard" class="mobile-link" target="_blank" rel="noopener">GitHub</a>
-			{#if $isLoggedIn}
-				<div class="mobile-divider"></div>
-				<a href="/dashboard" class="mobile-link" on:click={handleNavClick}>Dashboard</a>
-				<a href="/dashboard/listings" class="mobile-link" on:click={handleNavClick}>Listings</a>
-				<a href="/dashboard/wallet" class="mobile-link" on:click={handleNavClick}>Wallet</a>
-				<button class="mobile-link mobile-signout" on:click={handleSignOut}>Sign out</button>
-			{:else}
-				<div class="mobile-divider"></div>
-				<button class="mobile-connect" on:click={() => { handleNavClick(); handleSignIn(); }}>
-					Sign in with GitHub
-				</button>
-				{#if dev}
-					<button class="mobile-link" on:click={() => { handleNavClick(); setMockLogin(); }}>
-						Dev Login
-					</button>
-				{/if}
-			{/if}
 		</div>
 	{/if}
 </header>
@@ -285,159 +171,6 @@
 		background: var(--glass-hover);
 	}
 
-	/* Connect button */
-	.connect-btn {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		background: var(--text-primary);
-		color: var(--bg-base);
-		font-weight: 600;
-		font-size: 13px;
-		padding: 6px 16px;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		transition: opacity 0.15s ease;
-		white-space: nowrap;
-	}
-
-	.connect-btn:hover {
-		opacity: 0.85;
-	}
-
-	/* Dev login */
-	.dev-login-btn {
-		background: rgba(59, 130, 246, 0.1);
-		color: #3b82f6;
-		font-weight: 500;
-		font-size: 11px;
-		padding: 4px 8px;
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		border-radius: 6px;
-		cursor: pointer;
-	}
-
-	/* User menu */
-	.user-menu-wrap {
-		position: relative;
-	}
-
-	.user-btn {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		background: transparent;
-		border: 1px solid var(--border-subtle);
-		border-radius: 9999px;
-		padding: 3px 10px 3px 3px;
-		cursor: pointer;
-		color: var(--text-secondary);
-		transition: border-color 0.15s ease, background 0.15s ease;
-	}
-
-	.user-btn:hover {
-		border-color: var(--border-strong);
-		background: var(--glass-hover);
-	}
-
-	.avatar-img {
-		width: 26px;
-		height: 26px;
-		border-radius: 50%;
-		object-fit: cover;
-	}
-
-	.avatar-fallback {
-		width: 26px;
-		height: 26px;
-		border-radius: 50%;
-		background: var(--gradient-primary);
-		color: #ffffff;
-		font-weight: 700;
-		font-size: 11px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.username {
-		font-weight: 500;
-		font-size: 13px;
-	}
-
-	/* Dropdown */
-	.user-dropdown {
-		position: absolute;
-		top: calc(100% + 6px);
-		right: 0;
-		min-width: 200px;
-		background: var(--bg-surface);
-		border: 1px solid var(--border-subtle);
-		border-radius: 12px;
-		padding: 6px;
-		z-index: 200;
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-	}
-
-	.wallet-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 8px 10px;
-	}
-
-	.wallet-label {
-		font-size: 12px;
-		color: var(--text-muted);
-	}
-
-	.wallet-amount {
-		font-family: var(--font-mono);
-		font-size: 12px;
-		color: var(--sats-color);
-		font-weight: 600;
-	}
-
-	.dropdown-divider {
-		height: 1px;
-		background: var(--border-subtle);
-		margin: 2px 0;
-	}
-
-	.dropdown-item {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 10px;
-		border-radius: 8px;
-		font-size: 13px;
-		color: var(--text-secondary);
-		text-decoration: none;
-		background: none;
-		border: none;
-		cursor: pointer;
-		width: 100%;
-		text-align: left;
-		transition: background 0.1s ease, color 0.1s ease;
-	}
-
-	.dropdown-item:hover {
-		background: var(--glass-hover);
-		color: var(--text-primary);
-	}
-
-	.dropdown-signout {
-		color: var(--destructive) !important;
-	}
-
-	.dropdown-signout:hover {
-		background: rgba(239, 68, 68, 0.08) !important;
-	}
-
 	/* Hamburger */
 	.hamburger {
 		display: none;
@@ -485,44 +218,12 @@
 		color: var(--text-primary);
 	}
 
-	.mobile-signout {
-		color: var(--destructive) !important;
-	}
-
-	.mobile-divider {
-		height: 1px;
-		background: var(--border-subtle);
-		margin: 4px 0;
-	}
-
-	.mobile-connect {
-		background: var(--text-primary);
-		color: var(--bg-base);
-		font-weight: 600;
-		font-size: 14px;
-		padding: 10px 14px;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		text-align: center;
-		margin-top: 4px;
-	}
-
 	@media (max-width: 768px) {
 		.center-nav {
 			display: none;
 		}
 		.hamburger {
 			display: flex;
-		}
-		.connect-btn {
-			display: none;
-		}
-		.dev-login-btn {
-			display: none;
-		}
-		.username {
-			display: none;
 		}
 	}
 
