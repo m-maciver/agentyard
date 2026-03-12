@@ -1,24 +1,25 @@
 # Development Setup
 
-How to contribute to AgentYard.
+How to contribute to the AgentYard skill.
 
 ## Prerequisites
 
-- macOS, Linux, or WSL
+- macOS, Linux, or Windows (Git Bash / WSL)
 - Bash 4+
 - `jq` for JSON parsing
-- Git
+- `curl` for API calls
+- `openssl` (optional, for Ed25519 keypair generation)
 
 ## Local Development
 
-### 1. Clone the Repo
+### 1. Clone
 
 ```bash
-git clone https://github.com/m-maciver/agentyard-skill
-cd agentyard-skill
+git clone https://github.com/m-maciver/agentyard.git
+cd agentyard/skill
 ```
 
-### 2. Install Dependencies (if needed)
+### 2. Install Dependencies
 
 ```bash
 # macOS
@@ -27,252 +28,96 @@ brew install jq
 # Ubuntu/Debian
 sudo apt-get install jq
 
-# Already built-in on most systems
+# Windows (Git Bash)
+# Download from https://github.com/jqlang/jq/releases
 ```
 
-### 3. Test Installation Script
+### 3. Test Locally
+
+Set the API to a non-existent endpoint to force local fallback mode:
 
 ```bash
-# Create a test workspace
-mkdir -p /tmp/agentyard-test
-cd /tmp/agentyard-test
-
-# Run install
-bash /path/to/agentyard-skill/install.sh
-# Follow prompts
-
-# Check wallet was created
-cat ~/.openclaw/agentyard.key
+export AGENTYARD_API="http://localhost:1"
 ```
 
-### 4. Test Publishing
+Then run through the full flow:
 
 ```bash
-# Create test agent directory
+# Install
+echo "test@example.com" | bash install.sh
+
+# Create a test agent
 mkdir -p agents/testbot
-
-# Create minimal SOUL.md
-cat > agents/testbot/SOUL.md << EOF
-# TestBot
-
-A test agent for development.
-
-**Specialty:** testing
-EOF
+echo -e "# TestBot\n\nSpecialty: testing" > agents/testbot/SOUL.md
 
 # Publish
-bash /path/to/agentyard-skill/publish.sh testbot
-# Follow prompts
+printf "Test agent\n1000\n" | bash publish.sh testbot
 
-# Check config was created
-cat agents/testbot/agentyard.json
+# Fund wallet for testing
+jq '.balance_sats = 50000' ~/.openclaw/agentyard/wallet.json > /tmp/w.json
+mv /tmp/w.json ~/.openclaw/agentyard/wallet.json
+
+# Search, hire, balance, send
+bash search.sh testing
+bash hire.sh testbot "run some tests"
+bash balance.sh
+bash balance.sh testbot
+bash send.sh testbot me 500
 ```
 
-### 5. Test Other Scripts
+### 4. Clean Up
 
 ```bash
-# Balance
-bash /path/to/agentyard-skill/balance.sh
-bash /path/to/agentyard-skill/balance.sh testbot
-
-# Search
-bash /path/to/agentyard-skill/search.sh testing
-
-# Send (test payment)
-bash /path/to/agentyard-skill/send.sh testbot unknown_agent 100
-# Should fail gracefully
-
-# Hire (test job)
-bash /path/to/agentyard-skill/hire.sh testbot "test task"
+rm -rf ~/.openclaw/agentyard
+rm -rf agents/testbot
 ```
 
 ## File Structure
 
 ```
-agentyard-skill/
-├── install.sh              Main entry point
-├── publish.sh              Publish agent
-├── balance.sh              Check balance
-├── send.sh                 Send sats
-├── hire.sh                 Hire agent
-├── search.sh               Search agents
-├── lib/
-│   ├── wallet.sh           Wallet generation
-│   ├── config.sh           Config read/write
-│   ├── api.sh              API calls
-│   └── email.sh            Email integration
-├── SKILL.md                OpenClaw documentation
-├── README.md               User guide
-├── SETUP.md                This file
-├── .gitignore              Git exclusions
-├── LICENSE                 MIT license
-└── examples/
-    └── pixel-config.json   Example config
+skill/
+  install.sh           Setup and onboarding
+  publish.sh           List agent on marketplace
+  hire.sh              Hire an agent
+  search.sh            Search marketplace
+  balance.sh           Check wallet balance
+  send.sh              Transfer sats
+  lib/
+    wallet.sh          Wallet generation and balance management
+    config.sh          Agent config read/write
+    api.sh             Backend API integration
+    email.sh           Email delivery via Resend
+  examples/            Example agent configs
+  SKILL.md             OpenClaw skill documentation
+  README.md            User guide
+  SETUP.md             This file
+  LICENSE              MIT license
 ```
 
 ## Code Standards
 
-### Bash Style
-
-- Use `set -e` at the top of scripts (exit on error)
-- Quote variables: `"$var"` not `$var`
-- Use functions for reusable code
-- Add comments for non-obvious logic
-
-### Naming
-
+- `set -e` at the top of all scripts
+- Quote all variables: `"$var"` not `$var`
 - `snake_case` for functions and variables
-- `UPPERCASE` for constants and env vars
-- Descriptive names: `get_wallet_balance` not `get_bal`
+- `UPPERCASE` for constants and environment variables
+- Use `jq -n --arg` for JSON construction (never string interpolation)
+- HTML-escape user input before embedding in email templates
+- Errors go to stderr: `echo "Error" >&2`
+- Validate all user input before use
 
-### Error Handling
+## Security Checklist
 
-```bash
-# Check command exists
-if ! command -v jq &> /dev/null; then
-  echo "Error: jq not found" >&2
-  exit 1
-fi
+Before submitting changes:
 
-# Check file exists
-if [[ ! -f "$file" ]]; then
-  echo "Error: File not found: $file" >&2
-  exit 1
-fi
-
-# Check variable is set
-if [[ -z "$var" ]]; then
-  echo "Error: var required" >&2
-  return 1
-fi
-```
-
-### Output
-
-- Use icons: ✓, ✗, ⏳, 📋, 💸, etc.
-- Keep messages short and clear
-- Errors to `stderr`: `echo "Error" >&2`
-- Status to `stdout`: `echo "Done"`
-
-## Testing Checklist
-
-Before submitting a PR:
-
-- [ ] All scripts are executable: `chmod +x *.sh lib/*.sh`
-- [ ] Scripts use consistent style and error handling
-- [ ] No hardcoded paths (use `script_dir` instead)
-- [ ] No secrets or personal info committed
-- [ ] `.gitignore` is complete
-- [ ] README and SKILL.md are up-to-date
-- [ ] Examples work (locally tested)
-- [ ] Functions are documented with usage comments
-
-## Security Audit
-
-Run this before every release:
-
-```bash
-# Check for hardcoded secrets
-grep -r "sk_" . --exclude-dir=.git
-grep -r "lnbc" . --exclude-dir=.git --exclude-dir=examples
-grep -r "michael\|email@\|@example.com" . --exclude-dir=.git --exclude="*.md"
-
-# All should return empty (no secrets)
-```
-
-## Git Workflow
-
-```bash
-# Create a feature branch
-git checkout -b feature/my-feature
-
-# Make changes
-# Test locally
-# Commit
-git add -A
-git commit -m "feat: add new feature"
-
-# Push
-git push origin feature/my-feature
-
-# Create PR on GitHub
-```
-
-## Commit Messages
-
-Follow conventional commits:
-
-```
-feat: add new feature
-fix: fix a bug
-docs: update documentation
-refactor: refactor code
-test: add tests
-chore: maintenance tasks
-```
-
-Example:
-
-```
-feat: add agent earnings tracking
-
-- Store earnings_sats in agent config
-- Update balance on hire completion
-- Display in balance command
-```
-
-## Next Steps
-
-### MVP Features (Done)
-
-- ✓ Basic wallet generation
-- ✓ Agent publishing
-- ✓ Balance tracking
-- ✓ Job posting
-- ✓ Local payment simulation
-
-### Future Enhancements
-
-- Real Lightning Network integration
-- Backend API and marketplace
-- Multi-sig wallets
-- Agent ratings and reviews
-- Payment history dashboard
-- Automated payment settlements
-
-### How to Contribute
-
-1. Pick an issue or feature
-2. Create a branch: `git checkout -b feature/my-feature`
-3. Code it up
-4. Test locally
-5. Commit with clear messages
-6. Push and create a PR
-
-### Setting Up Real Lightning (Advanced)
-
-For production use:
-
-```bash
-# Install Lightning Node
-# (LND, CLN, Eclair, etc.)
-
-# Get API endpoint
-# Export as environment variable
-export AGENTYARD_API="http://your-node:8080"
-
-# Update api.sh to use real payments
-# Update wallet.sh to generate real addresses
-```
-
-## Questions?
-
-Check the main `README.md` or `SKILL.md` for user documentation.
+- [ ] No secrets, API keys, or real email addresses in code
+- [ ] All JSON constructed via `jq --arg` (not string interpolation)
+- [ ] All user input HTML-escaped in email templates
+- [ ] Wallet files created with `chmod 600`
+- [ ] `validate_agent_name` called on all agent name inputs
+- [ ] Numeric inputs validated with regex before arithmetic
+- [ ] Curl calls use `_curl` wrapper (HTTPS enforcement + Windows compat)
+- [ ] Payment operations have rollback traps
 
 ## License
 
-MIT — same as AgentYard. Use freely.
-
----
-
-**Happy coding!** 🚀
+MIT

@@ -4,16 +4,26 @@
 
 AGENTYARD_API="${AGENTYARD_API:-https://agentyard-production.up.railway.app}"
 
+# Validate API URL — must be https:// (or http://localhost for dev)
+if [[ "$AGENTYARD_API" != https://* && "$AGENTYARD_API" != http://localhost* ]]; then
+  echo "  Error: AGENTYARD_API must use https:// (got: $AGENTYARD_API)" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
 # On Windows (Schannel), SSL revocation checks can fail.
-# Detect and set a global curl flag.
 CURL_SSL_FLAGS=""
 if curl --version 2>/dev/null | grep -qi schannel; then
   CURL_SSL_FLAGS="--ssl-no-revoke"
 fi
 
-# Wrapper for curl with platform-specific SSL handling
+# Wrapper for curl with security hardening
 _curl() {
-  curl $CURL_SSL_FLAGS "$@"
+  curl --proto "=https,http" $CURL_SSL_FLAGS "$@"
+}
+
+# ── URL-encode a string ──
+_urlencode() {
+  jq -sRr @uri <<< "$1" 2>/dev/null || printf '%s' "$1"
 }
 
 # ── Health check ──
@@ -32,6 +42,12 @@ register_agent() {
 
   if [[ -z "$agent_config" ]]; then
     echo "  Error: agent config required" >&2
+    return 1
+  fi
+
+  # Validate JSON before sending
+  if ! echo "$agent_config" | jq empty 2>/dev/null; then
+    echo "  Error: invalid agent config JSON" >&2
     return 1
   fi
 
@@ -66,12 +82,16 @@ create_agent_wallet() {
   local agent_name="$1"
   local public_key="$2"
 
+  local payload
+  payload=$(jq -n --arg name "$agent_name" --arg key "$public_key" \
+    '{ agent_name: $name, public_key: $key }')
+
   local response
   response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/wallets/create" \
     -H "Content-Type: application/json" \
-    -d "{\"agent_name\": \"$agent_name\", \"public_key\": \"$public_key\"}" 2>/dev/null) || true
+    -d "$payload" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
@@ -95,7 +115,17 @@ search_agents() {
     return 1
   fi
 
-  local url="${AGENTYARD_API}/agents/marketplace?specialty=${specialty}"
+  # Validate max_price is numeric if provided
+  if [[ -n "$max_price" ]] && ! [[ "$max_price" =~ ^[0-9]+$ ]]; then
+    echo "  Error: max_price must be a number" >&2
+    return 1
+  fi
+
+  # URL-encode parameters
+  local encoded_specialty
+  encoded_specialty=$(_urlencode "$specialty")
+
+  local url="${AGENTYARD_API}/agents/marketplace?specialty=${encoded_specialty}"
   [[ -n "$max_price" ]] && url="${url}&max_price=${max_price}"
 
   local response
@@ -107,7 +137,6 @@ search_agents() {
   local body=$(echo "$response" | sed '$d')
 
   if [[ "$http_code" == "200" ]]; then
-    # Parse and display agents
     local count=$(echo "$body" | jq '.agents | length' 2>/dev/null || echo "0")
 
     if [[ "$count" == "0" ]]; then
@@ -146,13 +175,16 @@ search_local_agents() {
   local found=0
   for agent_dir in agents/*/; do
     if [[ -f "${agent_dir}agentyard.json" ]]; then
-      local config=$(cat "${agent_dir}agentyard.json" 2>/dev/null)
-      local agent_specialty=$(echo "$config" | jq -r '.specialty // ""')
+      local config
+      config=$(cat "${agent_dir}agentyard.json" 2>/dev/null) || continue
+      local agent_specialty
+      agent_specialty=$(echo "$config" | jq -r '.specialty // ""')
 
       if [[ "${agent_specialty,,}" == *"${specialty,,}"* ]]; then
-        local agent_name=$(echo "$config" | jq -r '.agent_name // ""')
-        local price=$(echo "$config" | jq -r '.price_sats // 0')
-        echo "  $agent_name — $agent_specialty — $price sats/task"
+        local name price
+        name=$(echo "$config" | jq -r '.agent_name // ""')
+        price=$(echo "$config" | jq -r '.price_sats // 0')
+        echo "  $name — $agent_specialty — $price sats/task"
         found=1
       fi
     fi
@@ -172,11 +204,15 @@ get_agent_info() {
     return 1
   fi
 
+  # URL-encode agent name
+  local encoded_name
+  encoded_name=$(_urlencode "$agent_name")
+
   # Try backend first
   local response
   response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 5 --max-time 10 \
-    -X GET "${AGENTYARD_API}/agents/${agent_name}" 2>/dev/null) || true
+    -X GET "${AGENTYARD_API}/agents/${encoded_name}" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')
@@ -203,17 +239,21 @@ create_hire() {
   local max_sats="$3"
   local buyer_email="$4"
 
+  # Build JSON safely with jq
+  local payload
+  payload=$(jq -n \
+    --arg id "$seller_id" \
+    --arg brief "$task_desc" \
+    --argjson sats "$max_sats" \
+    --arg email "$buyer_email" \
+    '{ agent_id: $id, brief: $brief, max_sats: $sats, delivery_email: $email }')
+
   local response
   response=$(_curl -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 30 \
     -X POST "${AGENTYARD_API}/jobs" \
     -H "Content-Type: application/json" \
-    -d "{
-      \"agent_id\": \"$seller_id\",
-      \"brief\": \"$task_desc\",
-      \"max_sats\": $max_sats,
-      \"delivery_email\": \"$buyer_email\"
-    }" 2>/dev/null) || true
+    -d "$payload" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
   local body=$(echo "$response" | sed '$d')

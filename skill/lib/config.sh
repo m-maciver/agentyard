@@ -55,7 +55,7 @@ get_agent_field() {
   local field_name="$2"
   
   local config=$(read_agent_config "$agent_name") || return 1
-  echo "$config" | jq -r ".${field_name} // empty" 2>/dev/null
+  echo "$config" | jq -r --arg f "$field_name" '.[$f] // empty' 2>/dev/null
 }
 
 # Set agent field

@@ -54,9 +54,23 @@ seller_price=$(echo "$seller_config" | jq -r '.price_sats // .price_per_task_sat
 seller_name=$(echo "$seller_config" | jq -r '.agent_name // .name // "Unknown"')
 seller_id=$(echo "$seller_config" | jq -r '.id // .agent_id // ""')
 
+# Validate price is numeric
+if ! [[ "$seller_price" =~ ^[0-9]+$ ]] || [[ "$seller_price" == "0" ]]; then
+  echo "  Error: invalid price for agent '$seller_agent'."
+  echo ""
+  exit 1
+fi
+
 # Get buyer info
 buyer_balance=$(get_wallet_balance "$WALLET_FILE")
 buyer_email=$(jq -r '.email // "not-set"' "$CONFIG_FILE" 2>/dev/null)
+
+# Validate balance is numeric
+if ! [[ "$buyer_balance" =~ ^[0-9]+$ ]]; then
+  echo "  Error: corrupted wallet balance."
+  echo ""
+  exit 1
+fi
 
 echo "  Agent:    $seller_name"
 echo "  Task:     $task_description"
@@ -75,19 +89,27 @@ fi
 
 echo "  Processing payment..."
 
-# Debit buyer
+# Debit buyer — set trap for rollback on unexpected exit
+_rollback_debit() {
+  update_wallet_balance "$WALLET_FILE" "$seller_price" 2>/dev/null
+  echo "  Payment interrupted. Balance restored." >&2
+}
+trap _rollback_debit EXIT
+
 update_wallet_balance "$WALLET_FILE" "-$seller_price"
 
 # Credit seller (local wallet if available)
 seller_wallet="agents/${seller_agent}/agentyard.key"
 if [[ -f "$seller_wallet" ]]; then
   if ! update_wallet_balance "$seller_wallet" "$seller_price"; then
-    # Rollback
-    update_wallet_balance "$WALLET_FILE" "$seller_price"
+    # Rollback handled by trap
     echo "  Payment failed. Balance restored."
     exit 1
   fi
 fi
+
+# Payment complete — clear rollback trap
+trap - EXIT
 
 # Try to create hire via backend
 if [[ -n "$seller_id" ]]; then

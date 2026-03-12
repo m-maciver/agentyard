@@ -37,13 +37,11 @@ echo "  Send Sats"
 echo "  ─────────"
 echo ""
 
-# Resolve sender wallet
-sender_wallet="agents/${sender}/agentyard.key"
-if [[ ! -f "$sender_wallet" ]]; then
-  # Check if it's the user's main wallet alias
-  if [[ "$sender" == "me" || "$sender" == "self" ]]; then
-    sender_wallet="$WALLET_FILE"
-  fi
+# Resolve sender wallet — check special aliases first
+if [[ "$sender" == "me" || "$sender" == "self" ]]; then
+  sender_wallet="$WALLET_FILE"
+else
+  sender_wallet="agents/${sender}/agentyard.key"
 fi
 
 if [[ ! -f "$sender_wallet" ]]; then
@@ -53,12 +51,11 @@ if [[ ! -f "$sender_wallet" ]]; then
   exit 1
 fi
 
-# Resolve receiver wallet
-receiver_wallet="agents/${receiver}/agentyard.key"
-if [[ ! -f "$receiver_wallet" ]]; then
-  if [[ "$receiver" == "me" || "$receiver" == "self" ]]; then
-    receiver_wallet="$WALLET_FILE"
-  fi
+# Resolve receiver wallet — check special aliases first
+if [[ "$receiver" == "me" || "$receiver" == "self" ]]; then
+  receiver_wallet="$WALLET_FILE"
+else
+  receiver_wallet="agents/${receiver}/agentyard.key"
 fi
 
 if [[ ! -f "$receiver_wallet" ]]; then
@@ -84,16 +81,24 @@ echo "  Amount:  $amount sats"
 echo ""
 echo "  Processing..."
 
-# Debit sender
+# Debit sender — set rollback trap for unexpected exit
+_rollback_send() {
+  update_wallet_balance "$sender_wallet" "$amount" 2>/dev/null
+  echo "  Payment interrupted. Balance restored." >&2
+}
+trap _rollback_send EXIT
+
 update_wallet_balance "$sender_wallet" "-$amount"
 
-# Credit receiver (rollback on failure)
+# Credit receiver
 if ! update_wallet_balance "$receiver_wallet" "$amount"; then
-  update_wallet_balance "$sender_wallet" "$amount"
   echo "  Payment failed. Balance restored."
   echo ""
   exit 1
 fi
+
+# Payment complete — clear rollback trap
+trap - EXIT
 
 sender_new=$(get_wallet_balance "$sender_wallet")
 receiver_new=$(get_wallet_balance "$receiver_wallet")

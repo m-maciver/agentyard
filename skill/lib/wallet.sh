@@ -30,7 +30,7 @@ generate_lightning_address() {
     fi
   fi
 
-  # Generate testnet-format address
+  # Generate local Lightning address (stub for offline/dev mode)
   local random_suffix=$(head -c 16 /dev/urandom | xxd -p | tr -d '\n')
   echo "lnbc_${random_suffix}"
 }
@@ -91,14 +91,41 @@ update_wallet_balance() {
     return 1
   fi
 
-  local current_balance=$(jq -r '.balance_sats // 0' "$wallet_path" 2>/dev/null || echo "0")
-  local new_balance=$((current_balance + amount))
+  # Use flock for atomic read-modify-write (if available)
+  local _do_update
+  _do_update() {
+    local current_balance
+    current_balance=$(jq -r '.balance_sats // 0' "$wallet_path" 2>/dev/null || echo "0")
 
-  old_umask=$(umask)
-  umask 077
-  jq ".balance_sats = $new_balance" "$wallet_path" > "${wallet_path}.tmp" && \
-  mv "${wallet_path}.tmp" "$wallet_path"
-  umask "$old_umask"
+    # Validate current balance is numeric
+    if ! [[ "$current_balance" =~ ^-?[0-9]+$ ]]; then
+      echo "Error: corrupted wallet balance" >&2
+      return 1
+    fi
+
+    local new_balance=$((current_balance + amount))
+
+    # Prevent negative balance
+    if [[ $new_balance -lt 0 ]]; then
+      echo "Error: insufficient balance" >&2
+      return 1
+    fi
+
+    local tmpfile
+    tmpfile=$(mktemp "${wallet_path}.XXXXXX") || return 1
+    chmod 600 "$tmpfile"
+    jq ".balance_sats = $new_balance" "$wallet_path" > "$tmpfile" && \
+    mv "$tmpfile" "$wallet_path"
+  }
+
+  if command -v flock &> /dev/null; then
+    (flock -x 200 && _do_update) 200>"${wallet_path}.lock"
+    local result=$?
+    rm -f "${wallet_path}.lock"
+    return $result
+  else
+    _do_update
+  fi
 }
 
 # ── Get wallet address ──

@@ -5,6 +5,17 @@
 RESEND_API_KEY="${RESEND_API_KEY:-}"
 RESEND_FROM="${RESEND_FROM:-AgentYard <notifications@agentyard.dev>}"
 
+# ── HTML-escape user input ──
+_html_escape() {
+  local text="$1"
+  text="${text//&/&amp;}"
+  text="${text//</&lt;}"
+  text="${text//>/&gt;}"
+  text="${text//\"/&quot;}"
+  text="${text//\'/&#39;}"
+  printf '%s' "$text"
+}
+
 # ── Check if email is configured ──
 _email_configured() {
   [[ -n "$RESEND_API_KEY" ]]
@@ -22,18 +33,34 @@ _send_email() {
     return 0
   fi
 
+  # Basic email validation
+  if ! [[ "$to" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
+    echo "  [email] Invalid email address: $to" >&2
+    return 1
+  fi
+
+  # Build JSON safely with jq (prevents injection)
+  local payload
+  payload=$(jq -n \
+    --arg from "$RESEND_FROM" \
+    --arg to "$to" \
+    --arg subject "$subject" \
+    --arg html "$html_body" \
+    '{ from: $from, to: [$to], subject: $subject, html: $html }')
+
+  # Use _curl if available (for Windows SSL compat), fall back to curl
+  local curl_cmd="curl"
+  if type _curl &>/dev/null; then
+    curl_cmd="_curl"
+  fi
+
   local response
-  response=$(curl -s -w "\n%{http_code}" \
+  response=$($curl_cmd -s -w "\n%{http_code}" \
     --connect-timeout 10 --max-time 15 \
+    --proto "=https" \
     -X POST "https://api.resend.com/emails" \
-    -H "Authorization: Bearer $RESEND_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "{
-      \"from\": \"$RESEND_FROM\",
-      \"to\": \"$to\",
-      \"subject\": \"$subject\",
-      \"html\": \"$html_body\"
-    }" 2>/dev/null)
+    -d "$payload" 2>/dev/null) || true
 
   local http_code=$(echo "$response" | tail -1)
 
@@ -57,13 +84,19 @@ send_hire_notification() {
     return 0
   fi
 
+  # HTML-escape all user-controlled values
+  local safe_name safe_task safe_amount
+  safe_name=$(_html_escape "$agent_name")
+  safe_task=$(_html_escape "$task")
+  safe_amount=$(_html_escape "$amount")
+
   local subject="Task assigned to ${agent_name} — ${amount} sats"
   local body="<div style='font-family: Inter, system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 0;'>"
   body+="<h2 style='font-size: 20px; font-weight: 700; margin: 0 0 16px;'>Task assigned</h2>"
-  body+="<p style='color: #71717a; line-height: 1.6;'><strong style='color: #09090b;'>${agent_name}</strong> has been hired for this task:</p>"
+  body+="<p style='color: #71717a; line-height: 1.6;'><strong style='color: #09090b;'>${safe_name}</strong> has been hired for this task:</p>"
   body+="<div style='background: #f4f4f5; border-radius: 8px; padding: 16px; margin: 16px 0;'>"
-  body+="<p style='margin: 0; color: #09090b;'>${task}</p></div>"
-  body+="<p style='color: #71717a;'>Payment: <strong style='color: #09090b;'>${amount} sats</strong></p>"
+  body+="<p style='margin: 0; color: #09090b;'>${safe_task}</p></div>"
+  body+="<p style='color: #71717a;'>Payment: <strong style='color: #09090b;'>${safe_amount} sats</strong></p>"
   body+="<p style='color: #a1a1aa; font-size: 13px; margin-top: 24px;'>Results will be delivered to this email once complete.</p>"
   body+="</div>"
 
@@ -82,16 +115,21 @@ send_task_delivery() {
     return 0
   fi
 
+  local safe_name safe_task safe_output
+  safe_name=$(_html_escape "$agent_name")
+  safe_task=$(_html_escape "$task")
+  safe_output=$(_html_escape "$output")
+
   local subject="Task complete — ${agent_name} delivered results"
   local body="<div style='font-family: Inter, system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 0;'>"
   body+="<h2 style='font-size: 20px; font-weight: 700; margin: 0 0 16px;'>Task complete</h2>"
-  body+="<p style='color: #71717a; line-height: 1.6;'><strong style='color: #09090b;'>${agent_name}</strong> has completed the task:</p>"
+  body+="<p style='color: #71717a; line-height: 1.6;'><strong style='color: #09090b;'>${safe_name}</strong> has completed the task:</p>"
   body+="<div style='background: #f4f4f5; border-radius: 8px; padding: 16px; margin: 16px 0;'>"
   body+="<p style='margin: 0 0 8px; color: #a1a1aa; font-size: 13px;'>Task</p>"
-  body+="<p style='margin: 0; color: #09090b;'>${task}</p></div>"
+  body+="<p style='margin: 0; color: #09090b;'>${safe_task}</p></div>"
   body+="<div style='background: #f4f4f5; border-radius: 8px; padding: 16px; margin: 16px 0;'>"
   body+="<p style='margin: 0 0 8px; color: #a1a1aa; font-size: 13px;'>Output</p>"
-  body+="<pre style='margin: 0; color: #09090b; white-space: pre-wrap; font-size: 14px;'>${output}</pre></div>"
+  body+="<pre style='margin: 0; color: #09090b; white-space: pre-wrap; font-size: 14px;'>${safe_output}</pre></div>"
   body+="<p style='color: #a1a1aa; font-size: 13px; margin-top: 24px;'>This output was scanned for integrity before delivery.</p>"
   body+="</div>"
 
@@ -110,12 +148,17 @@ send_payment_confirmation() {
     return 0
   fi
 
+  local safe_amount safe_sender safe_note
+  safe_amount=$(_html_escape "$amount")
+  safe_sender=$(_html_escape "$sender")
+  safe_note=$(_html_escape "$note")
+
   local subject="Payment received — ${amount} sats from ${sender}"
   local body="<div style='font-family: Inter, system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 0;'>"
   body+="<h2 style='font-size: 20px; font-weight: 700; margin: 0 0 16px;'>Payment received</h2>"
-  body+="<p style='color: #71717a;'>Amount: <strong style='color: #09090b;'>${amount} sats</strong></p>"
-  body+="<p style='color: #71717a;'>From: <strong style='color: #09090b;'>${sender}</strong></p>"
-  [[ -n "$note" ]] && body+="<p style='color: #71717a;'>Note: ${note}</p>"
+  body+="<p style='color: #71717a;'>Amount: <strong style='color: #09090b;'>${safe_amount} sats</strong></p>"
+  body+="<p style='color: #71717a;'>From: <strong style='color: #09090b;'>${safe_sender}</strong></p>"
+  [[ -n "$safe_note" ]] && body+="<p style='color: #71717a;'>Note: ${safe_note}</p>"
   body+="</div>"
 
   _send_email "$email" "$subject" "$body"

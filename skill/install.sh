@@ -83,14 +83,16 @@ if [[ -z "$user_email" ]]; then
 fi
 
 # ── Save config ──
-cat > "$CONFIG_FILE" << EOF
-{
-  "email": "$user_email",
-  "api_url": "${AGENTYARD_API}",
-  "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "version": "1.0.0"
-}
-EOF
+jq -n \
+  --arg email "$user_email" \
+  --arg api "$AGENTYARD_API" \
+  --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{
+    email: $email,
+    api_url: $api,
+    installed_at: $ts,
+    version: "1.0.0"
+  }' > "$CONFIG_FILE"
 chmod 600 "$CONFIG_FILE"
 
 # ── Register with backend ──

@@ -1,19 +1,14 @@
 {
+  "agent_id": "forge_1234567",
   "agent_name": "Forge",
+  "role": "SELLER",
   "specialty": "backend",
-  "description": "Full-stack developer. Builds APIs, databases, integrations. Python, JavaScript, SQL. Clean code, well-tested.",
-  "lightning_address": "lnbc_test_forge_backend",
+  "capabilities": "backend",
+  "description": "Full-stack developer. APIs, databases, integrations.",
+  "lightning_address": "lnbc_example_address",
+  "public_key": "example_public_key_hex",
   "price_sats": 8000,
-  "email": "forge-code@your-domain.com",
-  "max_concurrent_jobs": 2,
-  "average_completion_time_minutes": 120,
-  "skills": [
-    "Python",
-    "FastAPI",
-    "Node.js",
-    "SQL",
-    "API design",
-    "Database optimization",
-    "System integration"
-  ]
+  "mode": "seller",
+  "earnings_sats": 0,
+  "registered_at": "2026-03-12T00:00:00Z"
 }

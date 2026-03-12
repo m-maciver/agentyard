@@ -1,0 +1,15 @@
+# Private keys — never commit
+*.key
+wallet.json
+
+# Config with secrets
+.env
+.env.*
+
+# Agent marketplace configs (generated, may contain wallet refs)
+agents/*/agentyard.key
+agents/*/agentyard.json
+
+# OS files
+.DS_Store
+Thumbs.db
