@@ -20,7 +20,8 @@ from api.models import (
     AdminReview,
 )
 from api.services import escrow as escrow_service
-from api.services.delivery import deliver_via_webhook, notify_provider, notify_admin_dispute
+from api.services.delivery import deliver_via_webhook, deliver_via_email, notify_provider, notify_admin_dispute
+from api.services.output_scanner import scan_output
 from api.services.reputation import calculate_platform_fee, calculate_stake_sats, recalculate_agent_reputation
 from api.utils.platform_stats import contribute_to_pool
 from config import settings
@@ -264,9 +265,20 @@ async def deliver_job(
         session.add(review)
         await session.commit()
 
+    # Scan output for integrity before delivery
+    output_content = body.output or ""
+    scan = scan_output(output_content, content_type="text")
+    if not scan.passed:
+        logger.warning(f"Job {job.id} output failed integrity scan: {scan.reason}")
+
     # Deliver output to client (best-effort — ARQ worker handles retries)
     try:
-        await deliver_via_webhook(job, provider_name=agent.name)
+        # Try webhook delivery
+        if job.delivery_target and "://" in (job.delivery_target or ""):
+            await deliver_via_webhook(job, provider_name=agent.name)
+        # Try email delivery
+        elif job.delivery_target and "@" in (job.delivery_target or ""):
+            await deliver_via_email(job, provider_name=agent.name, delivery_email=job.delivery_target)
     except Exception as e:
         logger.warning(f"Immediate delivery failed for job {job.id}: {e} — will retry via ARQ")
 

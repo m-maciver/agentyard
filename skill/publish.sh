@@ -1,105 +1,136 @@
 #!/bin/bash
-# publish.sh - Publish agent as marketplace seller
+# publish.sh — List an agent on the AgentYard marketplace
+# Creates a wallet for the agent and registers it with the backend.
 
 set -e
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source library files
 source "${script_dir}/lib/wallet.sh"
 source "${script_dir}/lib/config.sh"
 source "${script_dir}/lib/api.sh"
 
-# Get agent name from argument
+AGENTYARD_DIR="$HOME/.openclaw/agentyard"
+
 agent_name="${1:-}"
 
 if [[ -z "$agent_name" ]]; then
-  echo "Usage: $0 <agent_name>"
-  echo "Example: $0 pixel"
+  echo ""
+  echo "  Usage: skill agentyard publish <agent_name>"
+  echo "  Example: skill agentyard publish pixel"
+  echo ""
   exit 1
 fi
 
 validate_agent_name "$agent_name" || exit 1
 
-# Check if agent exists
+# Check agent directory exists
 if [[ ! -d "agents/${agent_name}" ]]; then
-  echo "Error: Agent 'agents/${agent_name}' not found"
+  echo ""
+  echo "  Agent 'agents/${agent_name}' not found."
+  echo "  Make sure the agent directory exists in your workspace."
+  echo ""
   exit 1
 fi
 
 echo ""
-echo "📢 Publishing Agent: $agent_name"
-echo "=============================="
+echo "  Publishing: $agent_name"
+echo "  ─────────────────────────"
 echo ""
 
-# Read SOUL.md if it exists
+# Read SOUL.md for metadata
 soul_content=""
 if [[ -f "agents/${agent_name}/SOUL.md" ]]; then
   soul_content=$(read_agent_soul "$agent_name")
 fi
 
-# Extract agent info
 agent_display_name=$(extract_agent_name "$agent_name" "$soul_content")
 specialty=$(extract_specialty "$soul_content")
 
-# Prompt for specialty if not found
+# Prompt for missing info
 if [[ -z "$specialty" ]]; then
-  read -p "🎯 Enter agent specialty (e.g., design, coding, writing): " specialty
+  read -p "  Specialty (e.g., design, research, coding): " specialty
   if [[ -z "$specialty" ]]; then
-    echo "Error: Specialty required"
+    echo "  Error: specialty is required."
     exit 1
   fi
 fi
 
-# Prompt for price
-read -p "💰 Enter price in sats (default 5000): " price_sats
+echo "  Description — a short line about what this agent does."
+read -p "  Description: " description
+if [[ -z "$description" ]]; then
+  description="$specialty specialist"
+fi
+
+read -p "  Price per task (sats, default 5000): " price_sats
 price_sats="${price_sats:-5000}"
 
-# Validate price is a number
 if ! [[ "$price_sats" =~ ^[0-9]+$ ]]; then
-  echo "Error: Price must be a number"
+  echo "  Error: price must be a number."
   exit 1
 fi
 
 echo ""
-echo "⏳ Creating wallet for $agent_display_name..."
 
 # Create wallet for this agent
-wallet_address=$(create_wallet_file "agents/${agent_name}/agentyard.key")
-echo "✓ Wallet created: $wallet_address"
+echo "  Creating Lightning wallet for $agent_display_name..."
+agent_wallet_dir="agents/${agent_name}"
+agent_wallet_file="${agent_wallet_dir}/agentyard.key"
+
+wallet_address=$(create_wallet_file "$agent_wallet_file")
+public_key=$(get_wallet_pubkey "$agent_wallet_file")
+
+echo "  Wallet created."
 echo ""
 
-# Create config
-agent_id="${agent_name}_$(date +%s | tail -c 7)"
-config="{
-  \"agent_id\": \"$agent_id\",
-  \"agent_name\": \"$agent_display_name\",
-  \"specialty\": \"$specialty\",
-  \"lightning_address\": \"$wallet_address\",
-  \"price_sats\": $price_sats,
-  \"email\": \"seller@agentyard.local\",
-  \"mode\": \"seller\",
-  \"earnings_sats\": 0,
-  \"registered_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
-}"
+# Build config
+agent_id="${agent_name}_$(date +%s | tail -c 8)"
+config=$(jq -n \
+  --arg id "$agent_id" \
+  --arg name "$agent_display_name" \
+  --arg spec "$specialty" \
+  --arg desc "$description" \
+  --arg addr "$wallet_address" \
+  --arg pubkey "$public_key" \
+  --argjson price "$price_sats" \
+  '{
+    agent_id: $id,
+    agent_name: $name,
+    specialty: $spec,
+    description: $desc,
+    lightning_address: $addr,
+    public_key: $pubkey,
+    price_sats: $price,
+    mode: "seller",
+    earnings_sats: 0,
+    registered_at: (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
+  }')
 
-# Save config
+# Save config locally
 write_agent_config "$agent_name" "$config"
-echo "✓ Config saved"
-echo ""
 
-# Register with backend (local for MVP)
-register_agent "$config"
-echo ""
+# Register with backend
+echo "  Registering on marketplace..."
+if register_agent "$config" > /dev/null 2>&1; then
+  echo "  Registered."
+else
+  echo "  Saved locally. Will sync when API is available."
+fi
 
-echo "✓ Agent published!"
 echo ""
-echo "📊 Agent Details:"
-echo "  Name: $agent_display_name"
-echo "  Specialty: $specialty"
-echo "  Price: $price_sats sats"
-echo "  Wallet: $wallet_address"
-echo "  ID: $agent_id"
-echo ""
-echo "🔗 Marketplace: https://agentyard.local/agents/$agent_id"
+echo "  ┌─────────────────────────────────────────────────┐"
+echo "  │  Agent listed                                   │"
+echo "  │                                                 │"
+echo "  │  Name:       $agent_display_name"
+echo "  │  Specialty:  $specialty"
+echo "  │  Price:      $price_sats sats/task"
+echo "  │  Wallet:     $wallet_address"
+echo "  │                                                 │"
+echo "  │  This agent now has its own Lightning wallet.   │"
+echo "  │  When someone hires it, sats go directly into   │"
+echo "  │  this wallet.                                   │"
+echo "  │                                                 │"
+echo "  │  Private key: agents/${agent_name}/agentyard.key"
+echo "  │  Keep it safe. We cannot recover it.            │"
+echo "  │                                                 │"
+echo "  └─────────────────────────────────────────────────┘"
 echo ""

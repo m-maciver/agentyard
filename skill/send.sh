@@ -1,91 +1,109 @@
 #!/bin/bash
-# send.sh - Send sats between wallets
+# send.sh — Send sats between agent wallets
 
 set -e
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source library files
 source "${script_dir}/lib/wallet.sh"
 source "${script_dir}/lib/config.sh"
-source "${script_dir}/lib/email.sh"
 
-# Parse arguments
-sender_agent="${1:-}"
-receiver_agent="${2:-}"
+AGENTYARD_DIR="$HOME/.openclaw/agentyard"
+WALLET_FILE="$AGENTYARD_DIR/wallet.json"
+
+sender="${1:-}"
+receiver="${2:-}"
 amount="${3:-}"
 
-if [[ -z "$sender_agent" || -z "$receiver_agent" || -z "$amount" ]]; then
-  echo "Usage: $0 <sender_agent> <receiver_agent> <amount_sats>"
-  echo "Example: $0 pixel jet 2000"
+if [[ -z "$sender" || -z "$receiver" || -z "$amount" ]]; then
+  echo ""
+  echo "  Usage: skill agentyard send <from> <to> <amount_sats>"
+  echo "  Example: skill agentyard send pixel jet 2000"
+  echo ""
   exit 1
 fi
 
-validate_agent_name "$sender_agent" || exit 1
-validate_agent_name "$receiver_agent" || exit 1
+validate_agent_name "$sender" || exit 1
+validate_agent_name "$receiver" || exit 1
 
-# Validate amount
 if ! [[ "$amount" =~ ^[0-9]+$ ]]; then
-  echo "Error: Amount must be a number"
+  echo ""
+  echo "  Error: amount must be a number."
+  echo ""
   exit 1
 fi
 
 echo ""
-echo "💸 Send Sats"
-echo "============"
+echo "  Send Sats"
+echo "  ─────────"
 echo ""
 
-# Get sender wallet
-sender_wallet="agents/${sender_agent}/agentyard.key"
+# Resolve sender wallet
+sender_wallet="agents/${sender}/agentyard.key"
 if [[ ! -f "$sender_wallet" ]]; then
-  echo "Error: Sender wallet 'agents/${sender_agent}/agentyard.key' not found"
+  # Check if it's the user's main wallet alias
+  if [[ "$sender" == "me" || "$sender" == "self" ]]; then
+    sender_wallet="$WALLET_FILE"
+  fi
+fi
+
+if [[ ! -f "$sender_wallet" ]]; then
+  echo "  Wallet for '$sender' not found."
+  echo "  Run 'skill agentyard publish $sender' first."
+  echo ""
   exit 1
 fi
 
-# Get receiver wallet
-receiver_wallet="agents/${receiver_agent}/agentyard.key"
+# Resolve receiver wallet
+receiver_wallet="agents/${receiver}/agentyard.key"
 if [[ ! -f "$receiver_wallet" ]]; then
-  receiver_wallet="$HOME/.openclaw/agentyard.key"
+  if [[ "$receiver" == "me" || "$receiver" == "self" ]]; then
+    receiver_wallet="$WALLET_FILE"
+  fi
 fi
 
 if [[ ! -f "$receiver_wallet" ]]; then
-  echo "Error: Receiver wallet 'agents/${receiver_agent}/agentyard.key' or Jet's wallet not found"
+  echo "  Wallet for '$receiver' not found."
+  echo ""
   exit 1
 fi
 
-# Check sender balance
+# Check balance
 sender_balance=$(get_wallet_balance "$sender_wallet")
 
 if [[ $sender_balance -lt $amount ]]; then
-  echo "❌ Insufficient balance"
-  echo "   Available: $sender_balance sats"
-  echo "   Requested: $amount sats"
+  echo "  Insufficient balance."
+  echo "  Available: $sender_balance sats"
+  echo "  Requested: $amount sats"
+  echo ""
   exit 1
 fi
 
-echo "⏳ Processing payment..."
-echo "  From: $sender_agent"
-echo "  To: $receiver_agent"
-echo "  Amount: $amount sats"
+echo "  From:    $sender"
+echo "  To:      $receiver"
+echo "  Amount:  $amount sats"
 echo ""
+echo "  Processing..."
 
-# Deduct from sender
+# Debit sender
 update_wallet_balance "$sender_wallet" "-$amount"
 
-# Add to receiver (rollback sender debit on failure)
+# Credit receiver (rollback on failure)
 if ! update_wallet_balance "$receiver_wallet" "$amount"; then
-  echo "Error: Failed to credit receiver. Rolling back sender debit." >&2
   update_wallet_balance "$sender_wallet" "$amount"
+  echo "  Payment failed. Balance restored."
+  echo ""
   exit 1
 fi
 
-echo "✓ Payment sent!"
+sender_new=$(get_wallet_balance "$sender_wallet")
+receiver_new=$(get_wallet_balance "$receiver_wallet")
+
 echo ""
-echo "📊 Updated Balances:"
-
-sender_new_balance=$(get_wallet_balance "$sender_wallet")
-receiver_new_balance=$(get_wallet_balance "$receiver_wallet")
-
-echo "  $sender_agent: $sender_new_balance sats"
-echo "  $receiver_agent: $receiver_new_balance sats"
+echo "  ┌─────────────────────────────────────────────────┐"
+echo "  │  Payment sent                                    │"
+echo "  │                                                 │"
+echo "  │  $sender:  $sender_new sats"
+echo "  │  $receiver:  $receiver_new sats"
+echo "  │                                                 │"
+echo "  └─────────────────────────────────────────────────┘"
 echo ""

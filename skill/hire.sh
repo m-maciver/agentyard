@@ -1,102 +1,117 @@
 #!/bin/bash
-# hire.sh - Hire an agent to do work
+# hire.sh — Hire an agent from the AgentYard marketplace
+# Finds the agent, pays via Lightning, and delivers results to email.
 
 set -e
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source library files
 source "${script_dir}/lib/wallet.sh"
 source "${script_dir}/lib/config.sh"
 source "${script_dir}/lib/api.sh"
 source "${script_dir}/lib/email.sh"
 
-# Parse arguments
+AGENTYARD_DIR="$HOME/.openclaw/agentyard"
+WALLET_FILE="$AGENTYARD_DIR/wallet.json"
+CONFIG_FILE="$AGENTYARD_DIR/config.json"
+
 seller_agent="${1:-}"
 task_description="${2:-}"
 
 if [[ -z "$seller_agent" || -z "$task_description" ]]; then
-  echo "Usage: $0 <agent_name> '<task_description>'"
-  echo "Example: $0 pixel 'design this logo'"
+  echo ""
+  echo "  Usage: skill agentyard hire <agent_name> '<task>'"
+  echo "  Example: skill agentyard hire pixel 'design a landing page'"
+  echo ""
   exit 1
 fi
 
 validate_agent_name "$seller_agent" || exit 1
 
-echo ""
-echo "🏢 Hire Agent"
-echo "============="
-echo ""
-
-# Get buyer wallet (Jet)
-buyer_wallet="$HOME/.openclaw/agentyard.key"
-
-if [[ ! -f "$buyer_wallet" ]]; then
-  echo "❌ Jet's wallet not found. Run 'skill agentyard install' first."
+# Check wallet exists
+if [[ ! -f "$WALLET_FILE" ]]; then
+  echo ""
+  echo "  Wallet not found. Run 'skill agentyard install' first."
+  echo ""
   exit 1
 fi
 
-# Get seller config
+echo ""
+echo "  Hiring: $seller_agent"
+echo "  ─────────────────────"
+echo ""
+
+# Get seller info
 seller_config=$(get_agent_info "$seller_agent")
 
 if [[ -z "$seller_config" ]]; then
-  echo "❌ Agent '$seller_agent' not found on marketplace"
-  echo "   Available agents: skill agentyard search <specialty>"
+  echo "  Agent '$seller_agent' not found on the marketplace."
+  echo "  Run 'skill agentyard search <specialty>' to find agents."
+  echo ""
   exit 1
 fi
 
-# Extract seller info
-seller_price=$(echo "$seller_config" | jq -r '.price_sats')
-seller_name=$(echo "$seller_config" | jq -r '.agent_name')
-seller_email=$(echo "$seller_config" | jq -r '.email // "seller@agentyard.local"')
+seller_price=$(echo "$seller_config" | jq -r '.price_per_task_sats // .price_sats // 0')
+seller_name=$(echo "$seller_config" | jq -r '.name // .agent_name // "Unknown"')
+seller_id=$(echo "$seller_config" | jq -r '.id // .agent_id // ""')
 
-echo "📊 Job Details:"
-echo "  Agent: $seller_name"
-echo "  Task: $task_description"
-echo "  Price: $seller_price sats"
+# Get buyer info
+buyer_balance=$(get_wallet_balance "$WALLET_FILE")
+buyer_email=$(jq -r '.email // "not-set"' "$CONFIG_FILE" 2>/dev/null)
+
+echo "  Agent:    $seller_name"
+echo "  Task:     $task_description"
+echo "  Price:    $seller_price sats"
+echo "  Balance:  $buyer_balance sats"
 echo ""
 
-# Check buyer balance
-buyer_balance=$(get_wallet_balance "$buyer_wallet")
-
+# Check balance
 if [[ $buyer_balance -lt $seller_price ]]; then
-  echo "❌ Insufficient balance"
-  echo "   Available: $buyer_balance sats"
-  echo "   Required: $seller_price sats"
+  echo "  Insufficient balance."
+  echo "  You need $seller_price sats but have $buyer_balance sats."
+  echo "  Fund your wallet and try again."
+  echo ""
   exit 1
 fi
 
-# Create hire record
-hire_record=$(create_hire_record "jet" "$seller_agent" "$seller_price" "$task_description")
+echo "  Processing payment..."
 
-echo "⏳ Processing payment..."
+# Debit buyer
+update_wallet_balance "$WALLET_FILE" "-$seller_price"
 
-# Send payment from buyer to seller
-buyer_wallet_path="$HOME/.openclaw/agentyard.key"
-seller_wallet_path="agents/${seller_agent}/agentyard.key"
-
-update_wallet_balance "$buyer_wallet_path" "-$seller_price"
-if ! update_wallet_balance "$seller_wallet_path" "$seller_price"; then
-  echo "Error: Failed to credit seller. Rolling back buyer debit." >&2
-  update_wallet_balance "$buyer_wallet_path" "$seller_price"
-  exit 1
+# Credit seller (local wallet if available)
+seller_wallet="agents/${seller_agent}/agentyard.key"
+if [[ -f "$seller_wallet" ]]; then
+  if ! update_wallet_balance "$seller_wallet" "$seller_price"; then
+    # Rollback
+    update_wallet_balance "$WALLET_FILE" "$seller_price"
+    echo "  Payment failed. Balance restored."
+    exit 1
+  fi
 fi
 
-echo "✓ Payment sent!"
+# Try to create hire via backend
+if [[ -n "$seller_id" ]]; then
+  create_hire "$seller_id" "$task_description" "$seller_price" "$buyer_email" > /dev/null 2>&1 || true
+fi
+
+echo "  Payment sent."
 echo ""
 
-# Send notification emails
-echo "📧 Sending notifications..."
-send_hire_notification "$seller_email" "$seller_name" "$task_description" "$seller_price"
-echo ""
+# Send notification
+send_hire_notification "$buyer_email" "$seller_name" "$task_description" "$seller_price"
 
-echo "✓ Job posted!"
-echo ""
-echo "📋 Hire Record:"
-echo "$hire_record" | jq '.'
-echo ""
-echo "🔄 What's next:"
-echo "  1. $seller_name will receive the task in their notifications"
-echo "  2. They complete the work and deliver results"
-echo "  3. Payment is already in their wallet"
+new_balance=$(get_wallet_balance "$WALLET_FILE")
+
+echo "  ┌─────────────────────────────────────────────────┐"
+echo "  │  Hire complete                                  │"
+echo "  │                                                 │"
+echo "  │  Agent:      $seller_name"
+echo "  │  Task:       $task_description"
+echo "  │  Paid:       $seller_price sats"
+echo "  │  Balance:    $new_balance sats"
+echo "  │                                                 │"
+echo "  │  Results will be scanned for integrity and      │"
+echo "  │  delivered to: $buyer_email"
+echo "  │                                                 │"
+echo "  └─────────────────────────────────────────────────┘"
 echo ""

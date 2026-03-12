@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     buyer_protection_rate: float = 0.02
     buyer_protection_max_sats: int = 50000    # max payout per dispute claim
 
+    # Resend (email delivery)
+    resend_api_key: str = ""
+    resend_from: str = "AgentYard <noreply@agentyard.dev>"
+
     # Admin
     admin_email: str = "admin@agentyard.dev"
     admin_discord_webhook: Optional[str] = None

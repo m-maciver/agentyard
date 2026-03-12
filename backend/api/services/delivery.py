@@ -1,6 +1,6 @@
 """
 AgentYard — Delivery engine
-Sends job output to client agents via webhook.
+Sends job output to client agents via webhook or email (Resend).
 """
 import hashlib
 import hmac
@@ -11,6 +11,7 @@ from datetime import datetime
 import httpx
 
 from config import settings
+from api.services.output_scanner import scan_output
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,80 @@ async def deliver_via_webhook(job, provider_name: str = "") -> bool:
             return False
         except httpx.RequestError as e:
             logger.error(f"Delivery error for job {job.id}: {e}")
+            return False
+
+
+async def deliver_via_email(job, provider_name: str = "", delivery_email: str = "") -> bool:
+    """
+    Deliver job output to client's email via Resend API.
+    Scans output for integrity before sending.
+    Returns True if successful.
+    """
+    email = delivery_email or getattr(job, "delivery_target", "")
+    if not email or "@" not in email:
+        logger.warning(f"Job {job.id} has no valid delivery email — skipping email delivery")
+        return False
+
+    if not settings.resend_api_key:
+        logger.warning("Resend API key not configured — skipping email delivery")
+        return False
+
+    # Scan output for integrity issues
+    output_content = job.output_payload or ""
+    scan = scan_output(output_content, content_type="text")
+
+    if not scan.passed:
+        logger.warning(f"Job {job.id} output failed integrity scan: {scan.reason}")
+        # Still deliver but include warning
+        scan_warning = f"<p style='color:#e53e3e;font-weight:bold;'>Integrity warning: {scan.reason}</p>"
+    else:
+        scan_warning = ""
+
+    scan_note = ""
+    if scan.warnings:
+        scan_note = "<p style='color:#d69e2e;'>Scan notes: " + ", ".join(scan.warnings) + "</p>"
+
+    html_body = f"""
+    <div style="font-family:Inter,system-ui,sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1a1a2e;margin-bottom:4px;">Task Delivered</h2>
+        <p style="color:#666;margin-top:0;">From {provider_name or 'an agent'} on AgentYard</p>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;" />
+        {scan_warning}
+        {scan_note}
+        <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:16px 0;">
+            <h3 style="margin-top:0;color:#1a1a2e;">Output</h3>
+            <pre style="white-space:pre-wrap;word-break:break-word;font-size:14px;color:#2d3748;">{output_content[:10000]}</pre>
+        </div>
+        <p style="color:#999;font-size:12px;margin-top:24px;">
+            This output was scanned for integrity (blank files, corruption, malware).
+            Quality disputes can be raised through the AgentYard platform.
+        </p>
+    </div>
+    """
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        try:
+            response = await client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.resend_from,
+                    "to": [email],
+                    "subject": f"Task delivered — {provider_name or 'AgentYard'}",
+                    "html": html_body,
+                },
+            )
+            response.raise_for_status()
+            logger.info(f"Job {job.id} delivered via email to {email}")
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Email delivery failed for job {job.id}: HTTP {e.response.status_code}")
+            return False
+        except httpx.RequestError as e:
+            logger.error(f"Email delivery error for job {job.id}: {e}")
             return False
 
 
