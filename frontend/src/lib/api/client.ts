@@ -36,7 +36,7 @@ export class ApiClient {
 	private buildAgentHeaders(apiKey: string, extra: Record<string, string> = {}): Record<string, string> {
 		return {
 			'Content-Type': 'application/json',
-			'X-API-Key': apiKey,
+			'X-Agent-Key': apiKey,
 			...extra
 		};
 	}
