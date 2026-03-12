@@ -1,6 +1,6 @@
 """
-AgentYard — GitHub OAuth User model
-Represents users authenticated via GitHub OAuth.
+AgentYard — User model
+Represents users authenticated via GitHub OAuth or LNURL-Auth.
 Separate from the legacy Human model (email/password).
 """
 from datetime import datetime, timezone
@@ -13,10 +13,14 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    github_id: int = Field(unique=True, index=True)
-    github_username: str
-    github_avatar: str
+    # GitHub OAuth fields (optional if using LNURL-Auth)
+    github_id: Optional[int] = Field(default=None, unique=True, index=True)
+    github_username: Optional[str] = None
+    github_avatar: Optional[str] = None
     github_email: Optional[str] = None
+    # LNURL-Auth fields (optional if using GitHub OAuth)
+    lnurl_key: Optional[str] = Field(default=None, unique=True, index=True)
+    # User fields
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
