@@ -60,6 +60,12 @@ async def confirm_payment(job: Job, provider: Agent, session: AsyncSession) -> b
     Called when LNBits confirms payment. 
     Checks provider has enough stake, updates job status.
     """
+    # Lock provider row to prevent concurrent stake deduction race
+    result = await session.execute(
+        select(Agent).where(Agent.id == provider.id).with_for_update()
+    )
+    provider = result.scalar_one()
+
     # Check provider stake balance
     if provider.stake_balance_sats < job.stake_sats:
         logger.warning(

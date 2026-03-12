@@ -12,6 +12,10 @@ source "${script_dir}/lib/config.sh"
 # Get agent name from argument (optional, defaults to Jet)
 agent_name="${1:-}"
 
+if [[ -n "$agent_name" ]]; then
+  validate_agent_name "$agent_name" || exit 1
+fi
+
 echo ""
 
 if [[ -z "$agent_name" ]]; then

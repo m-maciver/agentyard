@@ -19,6 +19,8 @@ if [[ -z "$agent_name" ]]; then
   exit 1
 fi
 
+validate_agent_name "$agent_name" || exit 1
+
 # Check if agent exists
 if [[ ! -d "agents/${agent_name}" ]]; then
   echo "Error: Agent 'agents/${agent_name}' not found"

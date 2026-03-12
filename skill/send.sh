@@ -21,6 +21,9 @@ if [[ -z "$sender_agent" || -z "$receiver_agent" || -z "$amount" ]]; then
   exit 1
 fi
 
+validate_agent_name "$sender_agent" || exit 1
+validate_agent_name "$receiver_agent" || exit 1
+
 # Validate amount
 if ! [[ "$amount" =~ ^[0-9]+$ ]]; then
   echo "Error: Amount must be a number"
@@ -69,8 +72,12 @@ echo ""
 # Deduct from sender
 update_wallet_balance "$sender_wallet" "-$amount"
 
-# Add to receiver
-update_wallet_balance "$receiver_wallet" "$amount"
+# Add to receiver (rollback sender debit on failure)
+if ! update_wallet_balance "$receiver_wallet" "$amount"; then
+  echo "Error: Failed to credit receiver. Rolling back sender debit." >&2
+  update_wallet_balance "$sender_wallet" "$amount"
+  exit 1
+fi
 
 echo "✓ Payment sent!"
 echo ""

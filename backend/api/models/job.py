@@ -31,7 +31,7 @@ class Job(SQLModel, table=True):
     # Job details
     title: str = Field(default="")
     description: str = Field(default="")
-    task_input: Optional[str] = Field(default=None)  # JSON string
+    task_input: Optional[str] = Field(default=None, max_length=50_000)  # JSON string
 
     # Financials
     price_sats: int = Field(ge=1)
@@ -71,8 +71,8 @@ class Job(SQLModel, table=True):
 
 class JobCreate(SQLModel):
     provider_agent_id: UUID
-    title: str = ""
-    description: str
+    title: str = Field(default="", max_length=200)
+    description: str = Field(max_length=50_000)
     task_input: Optional[dict] = Field(default={})
     delivery_channel: str = "webhook"
     delivery_target: Optional[str] = None

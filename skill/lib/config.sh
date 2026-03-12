@@ -1,6 +1,16 @@
 #!/bin/bash
 # config.sh - Agent configuration management
 
+# Validate agent name (prevent path traversal)
+# Usage: validate_agent_name <name>
+validate_agent_name() {
+  local name="$1"
+  if ! [[ "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "Error: Invalid agent name '$name'. Only letters, numbers, hyphens, and underscores allowed." >&2
+    return 1
+  fi
+}
+
 # Read agent config
 # Usage: read_agent_config <agent_name>
 read_agent_config() {
@@ -59,9 +69,9 @@ set_agent_field() {
   
   # Update field (handle strings and numbers)
   if [[ "$value" =~ ^[0-9]+$ ]]; then
-    config=$(echo "$config" | jq ".${field_name} = ${value}")
+    config=$(echo "$config" | jq --arg f "$field_name" --argjson v "$value" '.[$f] = $v')
   else
-    config=$(echo "$config" | jq ".${field_name} = \"${value}\"")
+    config=$(echo "$config" | jq --arg f "$field_name" --arg v "$value" '.[$f] = $v')
   fi
   
   write_agent_config "$agent_name" "$config"

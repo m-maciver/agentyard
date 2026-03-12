@@ -26,8 +26,9 @@ limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# OAuth state storage (in-memory for MVP, can be Redis later)
+# OAuth state storage (in-memory for MVP; prefer Redis for production multi-instance deployments)
 _oauth_states: dict[str, float] = {}
+MAX_STATES = 1000
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,9 +53,20 @@ def create_github_jwt(user: User) -> str:
 @limiter.limit("10/minute")
 async def github_login(request: Request):
     """Redirect to GitHub OAuth authorization page."""
+    # Clean up expired states (>10 min old) before adding new ones
+    now = time.time()
+    expired = [k for k, v in _oauth_states.items() if now - v > 600]
+    for k in expired:
+        del _oauth_states[k]
+
+    # Evict oldest states if at capacity
+    while len(_oauth_states) >= MAX_STATES:
+        oldest_key = min(_oauth_states, key=_oauth_states.get)
+        del _oauth_states[oldest_key]
+
     # Generate and store OAuth state for CSRF prevention
     state = secrets.token_urlsafe(32)
-    _oauth_states[state] = time.time()
+    _oauth_states[state] = now
     
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"

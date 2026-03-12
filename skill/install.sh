@@ -27,7 +27,8 @@ mkdir -p "$HOME/.openclaw"
 
 echo "⏳ Creating Jet's wallet..."
 wallet_address=$(create_wallet_file "$HOME/.openclaw/agentyard.key")
-echo "✓ Wallet created: $wallet_address"
+update_wallet_balance "$HOME/.openclaw/agentyard.key" "50000"
+echo "✓ Wallet created: $wallet_address (50000 testnet sats)"
 echo ""
 
 # Prompt for email

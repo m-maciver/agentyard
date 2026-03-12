@@ -71,8 +71,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Agent-Key", "X-Admin-Key", "X-API-Key"],
 )
 
 
@@ -133,6 +133,7 @@ async def health_diagnose():
     from datetime import datetime, timezone, timedelta
     from api.database import get_session
     from api.models import AgentProfile, Job, JobStatus
+    from sqlmodel import select, col
 
     checks = {}
     warnings = []
@@ -165,7 +166,9 @@ async def health_diagnose():
             async with AsyncSession(engine) as session:
                 # Total registered agents
                 result = await session.execute(
-                    text("SELECT COUNT(*) FROM agentprofile WHERE is_active = 1 OR is_active = TRUE")
+                    select(func.count()).select_from(AgentProfile).where(
+                        AgentProfile.is_active == True
+                    )
                 )
                 checks["agents_registered"] = result.scalar_one_or_none() or 0
 
@@ -177,17 +180,24 @@ async def health_diagnose():
                     checks["protection_pool_sats"] = 0
 
                 # Active jobs (in_progress + escrowed + delivered)
-                active_statuses = ("in_progress", "escrowed", "delivered", "disputed")
-                status_placeholders = ", ".join(f"'{s}'" for s in active_statuses)
+                active_statuses = [
+                    JobStatus.IN_PROGRESS, JobStatus.ESCROWED,
+                    JobStatus.DELIVERED, JobStatus.DISPUTED,
+                ]
                 result = await session.execute(
-                    text(f"SELECT COUNT(*) FROM job WHERE status IN ({status_placeholders})")
+                    select(func.count()).select_from(Job).where(
+                        col(Job.status).in_(active_statuses)
+                    )
                 )
                 checks["jobs_active"] = result.scalar_one_or_none() or 0
 
                 # Jobs completed in last 24h
-                cutoff = (now - timedelta(hours=24)).isoformat()
+                cutoff = now - timedelta(hours=24)
                 result = await session.execute(
-                    text(f"SELECT COUNT(*) FROM job WHERE status = 'completed' AND completed_at >= '{cutoff}'")
+                    select(func.count()).select_from(Job).where(
+                        Job.status == JobStatus.COMPLETE,
+                        Job.completed_at >= cutoff,
+                    )
                 )
                 checks["jobs_completed_24h"] = result.scalar_one_or_none() or 0
 

@@ -280,7 +280,9 @@ async def complete_job(
     session: AsyncSession = Depends(get_session),
 ):
     """Client confirms delivery, triggers early escrow release."""
-    result = await session.execute(select(Job).where(Job.id == job_id))
+    result = await session.execute(
+        select(Job).where(Job.id == job_id).with_for_update()
+    )
     job = result.scalar_one_or_none()
     if not job:
         raise HTTPException(
@@ -360,7 +362,9 @@ async def accept_job_delivery(
     Buyer explicitly accepts delivery — releases sats immediately.
     Skips the dispute window entirely. Use when you're happy and want to pay now.
     """
-    result = await session.execute(select(Job).where(Job.id == job_id))
+    result = await session.execute(
+        select(Job).where(Job.id == job_id).with_for_update()
+    )
     job = result.scalar_one_or_none()
     if not job:
         raise HTTPException(

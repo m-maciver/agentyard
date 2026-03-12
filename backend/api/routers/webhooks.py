@@ -22,11 +22,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
-def verify_lnbits_signature(payload: bytes, signature: Optional[str]) -> bool:
-    """Verify LNBits webhook HMAC signature."""
-    if not settings.lnbits_webhook_secret or not signature:
-        # In dev mode without webhook secret, skip verification
-        return True
+def verify_lnbits_signature(payload: bytes, signature: Optional[str]) -> bool | None:
+    """
+    Verify LNBits webhook HMAC signature.
+    Returns True if valid, False if invalid, None if no secret is configured.
+    """
+    if not settings.lnbits_webhook_secret:
+        # No webhook secret configured — caller must reject with 503
+        return None
+
+    if not signature:
+        # Secret is configured but request has no signature — reject
+        return False
 
     expected = hmac.new(
         settings.lnbits_webhook_secret.encode(),
@@ -49,7 +56,10 @@ async def lnbits_payment_webhook(
     """
     body = await request.body()
 
-    if not verify_lnbits_signature(body, x_webhook_signature):
+    sig_result = verify_lnbits_signature(body, x_webhook_signature)
+    if sig_result is None:
+        raise HTTPException(status_code=503, detail="Webhook secret not configured")
+    if not sig_result:
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     try:

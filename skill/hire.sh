@@ -21,6 +21,8 @@ if [[ -z "$seller_agent" || -z "$task_description" ]]; then
   exit 1
 fi
 
+validate_agent_name "$seller_agent" || exit 1
+
 echo ""
 echo "🏢 Hire Agent"
 echo "============="
@@ -74,7 +76,11 @@ buyer_wallet_path="$HOME/.openclaw/agentyard.key"
 seller_wallet_path="agents/${seller_agent}/agentyard.key"
 
 update_wallet_balance "$buyer_wallet_path" "-$seller_price"
-update_wallet_balance "$seller_wallet_path" "$seller_price"
+if ! update_wallet_balance "$seller_wallet_path" "$seller_price"; then
+  echo "Error: Failed to credit seller. Rolling back buyer debit." >&2
+  update_wallet_balance "$buyer_wallet_path" "$seller_price"
+  exit 1
+fi
 
 echo "✓ Payment sent!"
 echo ""

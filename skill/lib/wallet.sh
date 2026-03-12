@@ -87,10 +87,11 @@ update_wallet_balance() {
   local current_balance=$(jq -r '.balance_sats // 0' "$wallet_path" 2>/dev/null || echo "0")
   local new_balance=$((current_balance + amount))
   
+  old_umask=$(umask)
+  umask 077
   jq ".balance_sats = $new_balance" "$wallet_path" > "${wallet_path}.tmp" && \
   mv "${wallet_path}.tmp" "$wallet_path"
-  
-  chmod 600 "$wallet_path"
+  umask "$old_umask"
 }
 
 # Get wallet address
